@@ -241,9 +241,19 @@ SELF_LEARNING = NOT_VERIFIED
 NOVEL_AI_ALGORITHM = NOT_VERIFIED
 ```
 
+## Repository establishment
+
+```text
+REPOSITORY = SportyRain/physical_ai_skill_intelligence
+AUTHORITATIVE_BRANCH = main
+REPOSITORY_ESTABLISHED = VERIFIED
+GITHUB_WRITE_AVAILABLE = YES
+```
+
+The repository was created by the user and the verified clean-room source plus Milestone 1-3 development history was published to `main` through the authenticated GitHub connection. The one bootstrap commit exists only because the GitHub API requires an initial ref for an otherwise empty repository.
+
 ## Unresolved / intentionally deferred
 
-- GitHub repository creation is not exposed by the currently available GitHub connector, so the local `main` repository cannot yet be pushed to `SportyRain/physical_ai_skill_intelligence` from this session.
 - Only one real Push trial exists per benchmark candidate strategy in the current exact comparable context. This is enough to validate the software path but not enough to establish strategy superiority.
 - The Push provider applicability context includes `goal_displacement_y_m=0.02` while the actual tested relative goal is 0.015 m. Both are preserved; semantic reconciliation is deferred.
 - Object, target, and scene identities are unavailable in the imported Push/Pick run manifests and therefore remain `UNKNOWN`. Because exact matching is fail-closed, these records must not be generalized to known different identities.

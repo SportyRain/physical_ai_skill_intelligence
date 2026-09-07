@@ -27,6 +27,14 @@ Decision / Ranking
 Existing Skill Provider
 ```
 
+## Authoritative repository
+
+```text
+SportyRain/physical_ai_skill_intelligence
+branch: main
+status: VERIFIED
+```
+
 ## Implemented software boundary
 
 - semantically explicit multi-experience representation
