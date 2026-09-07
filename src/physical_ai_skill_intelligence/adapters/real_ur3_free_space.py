@@ -1,10 +1,10 @@
 """M8 adapter for one source-attested real UR3 +5 mm free-space action.
 
-This adapter owns no ROS, controller, planner, retry, recovery, timeout, or
-cancellation machinery.  It validates the narrow Physical AI request, attests
+This adapter owns no ROS, controller, planner, retry, recovery, timeout thread,
+or robot stop machinery. It validates the narrow Physical AI request, attests
 the caller-pinned provider source immediately before the call, invokes the
-provider's existing bounded action, and preserves the provider result without
-inventing WorldState updates or broader motion capability.
+provider's bounded operation/cleanup contract, and preserves the provider result
+without inventing broader motion capability.
 """
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from collections.abc import Mapping
 from dataclasses import asdict, dataclass
 from importlib import import_module
 from math import isfinite
-from typing import Any
+from typing import Any, Callable
 
 from ..goal import Goal
 from ..provenance import Provenance, validate_commit
@@ -32,6 +32,8 @@ PROVIDER_CALLABLE = "execute_positive_axis_5mm"
 SOURCE_PATH = "src/ur3_visual_servoing/runtime/real_free_space_translation.py"
 
 DEFAULT_MOTION_TIMEOUT_S = 12.0
+DEFAULT_OPERATION_TIMEOUT_S = 30.0
+DEFAULT_CLEANUP_TIMEOUT_S = 15.0
 DEFAULT_SETTLE_ERROR_MM = 1.0
 
 
@@ -41,13 +43,22 @@ def _positive(value: Any, name: str) -> float:
     return float(value)
 
 
-def _runtime_contract(timeout_s: float) -> ProviderRuntimeContract:
+def _runtime_contract(
+    operation_timeout_s: float, cleanup_timeout_s: float
+) -> ProviderRuntimeContract:
     return ProviderRuntimeContract(
-        configured_timeout_s=timeout_s,
-        timeout_api=f"{PROVIDER_MODULE}:_RosRuntime.move",
-        timeout_scope="motion settle loop only; startup and cleanup excluded",
-        cancel_api="UNKNOWN",
-        cancel_completion_semantics="UNKNOWN",
+        configured_wall_clock_limit_s=operation_timeout_s + cleanup_timeout_s,
+        configured_timeout_s=operation_timeout_s,
+        timeout_api=f"{PROVIDER_MODULE}:{PROVIDER_CALLABLE}(operation_timeout_sec=...)",
+        timeout_scope=(
+            "provider startup + motion under one monotonic operation deadline; "
+            "safety cleanup uses an independent bounded cleanup budget"
+        ),
+        cancel_api=f"{PROVIDER_MODULE}:{PROVIDER_CALLABLE}(cancel_requested=callable)",
+        cancel_completion_semantics=(
+            "CANCELLED is terminal only after provider cleanup_completed=true; "
+            "real physical stop after cancel remains a separate physical claim"
+        ),
     )
 
 
@@ -59,13 +70,20 @@ class RealUr3PositiveAxis5mmProvider:
     provider_repository: str | None = None
     execute_real: bool = False
     motion_timeout_s: float = DEFAULT_MOTION_TIMEOUT_S
+    operation_timeout_s: float = DEFAULT_OPERATION_TIMEOUT_S
+    cleanup_timeout_s: float = DEFAULT_CLEANUP_TIMEOUT_S
     settle_error_mm: float = DEFAULT_SETTLE_ERROR_MM
+    cancel_requested: Callable[[], bool] | None = None
 
     def __post_init__(self) -> None:
         if type(self.execute_real) is not bool:
             raise ValueError("execute_real must be boolean")
         _positive(self.motion_timeout_s, "motion_timeout_s")
+        _positive(self.operation_timeout_s, "operation_timeout_s")
+        _positive(self.cleanup_timeout_s, "cleanup_timeout_s")
         _positive(self.settle_error_mm, "settle_error_mm")
+        if self.cancel_requested is not None and not callable(self.cancel_requested):
+            raise ValueError("cancel_requested must be callable or None")
         self.provenance.validate()
         validate_commit(
             self.provenance.artifact_snapshot_commit,
@@ -100,7 +118,9 @@ class RealUr3PositiveAxis5mmProvider:
             failure_code=failure_code,
             metrics=metrics,
             provenance=self.provenance,
-            runtime_contract=_runtime_contract(float(self.motion_timeout_s)),
+            runtime_contract=_runtime_contract(
+                float(self.operation_timeout_s), float(self.cleanup_timeout_s)
+            ),
         )
 
     def execute(self, skill_name: str, goal: Goal, state: WorldState) -> ProviderResult:
@@ -161,7 +181,10 @@ class RealUr3PositiveAxis5mmProvider:
                 axis,
                 execute=self.execute_real,
                 motion_timeout_sec=float(self.motion_timeout_s),
+                operation_timeout_sec=float(self.operation_timeout_s),
+                cleanup_timeout_sec=float(self.cleanup_timeout_s),
                 settle_error_mm=float(self.settle_error_mm),
+                cancel_requested=self.cancel_requested,
             )
         except Exception as exc:
             return self._result(
@@ -180,15 +203,71 @@ class RealUr3PositiveAxis5mmProvider:
             if payload["status"] not in {
                 "PASS",
                 "TIMEOUT",
+                "CANCELLED",
                 "BLOCKED_EXECUTION_REQUIRED",
             }:
                 raise ValueError("unexpected provider status")
-            if type(payload["provider_completed"]) is not bool:
-                raise ValueError("provider completion must be explicit")
-            if type(payload["command_published"]) is not bool:
-                raise ValueError("command publication must be explicit")
-            if type(payload["settled"]) is not bool or type(payload["timed_out"]) is not bool:
-                raise ValueError("provider termination flags must be explicit")
+            for name in (
+                "provider_completed",
+                "command_published",
+                "settled",
+                "timed_out",
+                "servo_paused",
+                "cancel_requested",
+                "cancel_completed",
+                "cleanup_completed",
+            ):
+                if type(payload[name]) is not bool:
+                    raise ValueError(f"{name} must be explicit bool")
+            for name in (
+                "motion_elapsed_s",
+                "operation_elapsed_s",
+                "cleanup_elapsed_s",
+                "wall_clock_elapsed_s",
+                "configured_operation_timeout_s",
+                "configured_cleanup_timeout_s",
+                "configured_wall_clock_limit_s",
+            ):
+                value = payload[name]
+                if type(value) not in (int, float) or not isfinite(value) or value < 0.0:
+                    raise ValueError(f"{name} must be finite and non-negative")
+            if not isinstance(payload["termination_reason"], str) or not payload[
+                "termination_reason"
+            ].strip():
+                raise ValueError("termination_reason must be explicit")
+            expected_wall_clock_limit = (
+                float(payload["configured_operation_timeout_s"])
+                + float(payload["configured_cleanup_timeout_s"])
+            )
+            if abs(
+                float(payload["configured_wall_clock_limit_s"])
+                - expected_wall_clock_limit
+            ) > 1e-9:
+                raise ValueError("provider wall-clock limit is internally inconsistent")
+            if float(payload["wall_clock_elapsed_s"]) > expected_wall_clock_limit:
+                raise ValueError("provider result exceeded configured wall-clock limit")
+            if payload["status"] == "CANCELLED":
+                if not payload["cancel_requested"] or not payload["cancel_completed"]:
+                    raise ValueError("CANCELLED requires completed cancellation")
+            elif payload["cancel_completed"]:
+                raise ValueError("non-cancel result cannot claim cancel completion")
+            if payload["status"] == "PASS" and (
+                not payload["cleanup_completed"]
+                or payload["final_fpc_state"] != "inactive"
+                or payload["servo_paused"] is not True
+            ):
+                raise ValueError("PASS requires completed safe cleanup")
+            if payload["status"] in {"TIMEOUT", "CANCELLED"} and payload[
+                "command_published"
+            ]:
+                if (
+                    not payload["cleanup_completed"]
+                    or payload["final_fpc_state"] != "inactive"
+                    or payload["servo_paused"] is not True
+                ):
+                    raise ValueError(
+                        "post-command terminal result requires completed safe cleanup"
+                    )
         except Exception as exc:
             return self._result(
                 False,
@@ -201,6 +280,16 @@ class RealUr3PositiveAxis5mmProvider:
             "provider_result": payload,
             "command_accepted": payload["command_acceptance"],
             "provider_completed": payload["provider_completed"],
+            "termination": {
+                "reason": payload["termination_reason"],
+                "cancel_requested": payload["cancel_requested"],
+                "cancel_completed": payload["cancel_completed"],
+                "cleanup_completed": payload["cleanup_completed"],
+                "wall_clock_elapsed_s": payload["wall_clock_elapsed_s"],
+                "configured_wall_clock_limit_s": payload[
+                    "configured_wall_clock_limit_s"
+                ],
+            },
             "actual_tcp_motion_observation": {
                 "initial_tcp_base_m": payload["initial_tcp_base_m"],
                 "target_tcp_base_m": payload["target_tcp_base_m"],
@@ -221,6 +310,9 @@ class RealUr3PositiveAxis5mmProvider:
             "observed_translation_norm_m",
             "final_error_mm",
             "motion_elapsed_s",
+            "operation_elapsed_s",
+            "cleanup_elapsed_s",
+            "wall_clock_elapsed_s",
         ):
             value = payload[name]
             if type(value) in (int, float) and isfinite(value):
@@ -232,6 +324,7 @@ class RealUr3PositiveAxis5mmProvider:
             and payload["provider_completed"]
             and payload["settled"]
             and not payload["timed_out"]
+            and payload["cleanup_completed"]
             and payload["final_fpc_state"] == "inactive"
             and payload["servo_paused"] is True
             and payload["observed_axis_translation_m"] is not None
