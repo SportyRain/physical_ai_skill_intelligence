@@ -7,19 +7,20 @@ The M7.1 claim scope below mirrors that ledger.
 M1–M6 and M6.1 remain closed. M7 software provider integration is CLOSED on
 `main`; its historical verification is in [M7 verification](MILESTONE_7_VERIFICATION.md).
 The authoritative M7.1 base is `c1a38f80bf7db6baf4bd595b716e7cc973044688` on `main`.
-M7.1 work remains on `m7.1-runtime-contract-readiness`; it has not been merged.
+M7.1 is CLOSED on authoritative `main`.
 
-The user supplied **CODE PASS** for source commit `1a200c7df53d2d24c18eeb787a5336c80cec9c52`.
-This follow-up updates documentation only. M7.1 remains **pending reviewer
-approval**; CODE PASS does not close the milestone or authorize M8.
+Independent reviewer audit passed M7.1, including source commit
+`1a200c7df53d2d24c18eeb787a5336c80cec9c52`. This documentation-only follow-up
+finalizes M7.1 after independent reviewer approval. M8 has not started.
 
 ```text
-WORKING_BRANCH = m7.1-runtime-contract-readiness
+AUTHORITATIVE_BRANCH = main
 M7_1_BASE_COMMIT = c1a38f80bf7db6baf4bd595b716e7cc973044688
 M7_1_REVIEWED_SOURCE_COMMIT = 1a200c7df53d2d24c18eeb787a5336c80cec9c52
+M7_1_REVIEW = PASS
 M7_1_CODE_REVIEW = PASS
-M7_1_CODE_REVIEW_AUTHORITY = USER_SUPPLIED_REVIEWER_RESULT
-M7_1_STATUS = PENDING_REVIEWER_APPROVAL
+M7_1_CODE_REVIEW_AUTHORITY = INDEPENDENT_REVIEWER_AUDIT
+M7_1_STATUS = CLOSED
 M7_1_FOLLOW_UP_SCOPE = DOCUMENTATION_ONLY; SOURCE_AND_TESTS_UNCHANGED_FROM_REVIEWED_COMMIT
 M8_STARTED = NO
 M7_1_RUNTIME_CONTRACT_READINESS = VERIFIED
@@ -38,7 +39,7 @@ PROVIDER_TIMEOUT = NOT_VERIFIED
 PROVIDER_CANCEL = NOT_VERIFIED
 REAL_UR3_PROVIDER_ADAPTER = NOT_VERIFIED
 REAL_ROBOT_EXECUTION = NOT_VERIFIED
-STATUS = M7_1_RUNTIME_CONTRACT_COMPLETE_PENDING_REVIEW
+STATUS = M7_1_FINALIZED_ON_MAIN
 ```
 
 See [M7.1 verification](MILESTONE_7_1_VERIFICATION.md) for the implementation
