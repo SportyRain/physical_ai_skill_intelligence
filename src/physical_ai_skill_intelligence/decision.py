@@ -80,6 +80,7 @@ class DecisionEngine:
             rows.append((order, skill, est, score))
 
         if self.ranking_mode == "lexicographic_success_then_cost":
+            # Preserve input order only as the final deterministic tie-break.
             rows.sort(
                 key=lambda row: (
                     -row[2].success_probability,
