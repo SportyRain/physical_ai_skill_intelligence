@@ -420,7 +420,7 @@ Inspected base: `f9c111e84c83eeea3352767a958688c29d6eb58e`.
 STATUS = Documentation workflow established; existing verification claims unchanged
 
 WHAT_CHANGED = Added root Start Here and agent workflow documents, a short README
-discovery pointer, a status-to-history link, and this M1–M7.1 decision backfill.
+discovery pointer, and a status-to-history link, plus this M1–M7.1 decision backfill.
 
 WHY = Give Reviewer, Execution, Research, and Codex/agent sessions the same latest
 main context without relying on external Knowledge or restarting prior reasoning.
@@ -443,3 +443,72 @@ source/ledger discrepancy and physical/runtime NOT_VERIFIED items remain open.
 
 NEXT = Use this entry workflow for subsequent authorized work; retain M8 as a
 separate controlled runtime validation/reviewer gate.
+
+## 2026-09-08 — M8 first real-runtime failure root cause and READY gate correction
+
+DATE = 2026-09-08
+
+MILESTONE / DECISION = M8 controlled real-runtime validation remains ACTIVE; first
+physical trial did not verify +Z success, and readiness was hardened fail-closed
+before any retry.
+
+WHAT_CHANGED = The first controlled real-UR3 M8 call reached the existing provider
+and entered the FPC motion lifecycle, but the requested +Z 5 mm outcome was not
+achieved. Follow-up read-only diagnostics isolated the failure boundary. Direct
+RTDE output reported `runtime_state=PAUSED(4)` and `speed_scaling=0.0` in 5/5
+samples while safety remained NORMAL and robot mode RUNNING. The previous canonical
+`ur3-ready` nevertheless returned `PA-000 / READY`. Provider PR #217 added fresh
+effective-speed-scaling observation and blocks unknown/non-finite scaling as
+`PA-READY-823` and zero/non-positive scaling as `PA-READY-824`. The exact merged
+provider was rebuilt into the canonical install and the installed source SHA
+matched the merged source.
+
+WHY = M8 requires a fail-closed pre-motion machine gate. External-Control liveness,
+robot RUNNING, safety NORMAL, fresh TCP, and inactive motion controllers were
+insufficient to establish that the UR hardware was actually in an execution-capable
+runtime state. Allowing `PA-000` while effective scaling was zero would permit
+another physical call that cannot execute.
+
+EVIDENCE =
+- Physical AI adapter merge: `f9c111e84c83eeea3352767a958688c29d6eb58e`
+- Provider bounded +5 mm action merge: `8733c1f0a1172200d5a0b42a3fea4cd76bc4bcc2`
+- Provider READY fix PR #217 / merged main: `c0f10051a0ea1881df2ccf90d12c7ddb7f74f16a`
+- Trial: `M8_REAL_Z5MM_20260908_003646`
+- Trial log SHA256: `e36b8bf321c5ca8ec2eca0da9eeecb52a43dbbd8fbc4eab5d41ccddfcc492347`
+- RTDE root-cause evidence SHA256: `c623261d7f35f5cb35be2a5da12ef8b9412ca049cebd08acbafdd624385982a1`
+- READY software + live CHECK_ONLY A/B SHA256: `155ac2c5b6d95fd18f3e5af9d5f35d48d1a9d6e67a1cfa4bd87abd5baa4dd789`
+- Provider READY commit/push evidence SHA256: `532b02be25baa086a766b47aba8d13741ce85107edfaf9c036ef3e395607873a`
+- Canonical rebuild/fail-closed evidence SHA256: `4f8cc22f9f7ac785e0a2c1a3ba3d96102913b4e7aa2ea0d8fbfb88d9c344b0d9`
+- Focused provider READY regression: `56 passed`
+- Canonical old/new A/B: old `PA-000 / READY`, effective scaling `0.0`; new
+  `PA-READY-824 / MOTION_SCALING_ZERO / BLOCKED`
+- Physical action during diagnostic/fix validation: NO
+
+REVIEW_DECISION =
+`M8_TRIAL001_ROOT_CAUSE = VERIFIED`.
+`READY_FALSE_POSITIVE = VERIFIED`.
+`READY_SPEED_SCALING_FIX_SOFTWARE = VERIFIED`.
+`READY_SPEED_SCALING_FIX_REAL_CHECK_ONLY = VERIFIED`.
+`CANONICAL_READY_SPEED_SCALING_FIX = VERIFIED`.
+
+These decisions are limited to the failure diagnosis and readiness boundary. They
+do not establish successful real skill execution.
+
+UNRESOLVED =
+`REAL_UR3_+Z_5MM_SUCCESS = NOT_VERIFIED`.
+`REAL_UR3_PROVIDER_ADAPTER = NOT_VERIFIED`.
+`REAL_ROBOT_EXECUTION = NOT_VERIFIED`.
+`PROVIDER_TIMEOUT = NOT_VERIFIED`.
+`PROVIDER_CANCEL = NOT_VERIFIED`.
+`PHYSICAL_STOP_AFTER_CANCEL = NOT_VERIFIED`.
+`WALL_CLOCK_BOUND = NOT_VERIFIED`.
+`BOUNDED_REAL_RUNTIME_TERMINATION = NOT_VERIFIED`.
+The trial's structured provider JSON was lost because evidence serialization failed
+after the provider call returned, so timeout is not promoted from inference.
+
+NEXT = Keep the second real motion blocked. With all motion controllers inactive,
+restore the verified headless External-Control runtime using the existing
+`resend_robot_program` service, then prove with read-only evidence that RTDE
+`runtime_state=PLAYING`, effective speed scaling is positive, and canonical
+`ur3-ready=PA-000`. Only after that machine gate and renewed physical safety
+confirmation may a second +Z 5 mm trial be considered.
