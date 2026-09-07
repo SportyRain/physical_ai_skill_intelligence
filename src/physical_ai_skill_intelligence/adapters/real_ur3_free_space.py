@@ -228,6 +228,7 @@ class RealUr3PositiveAxis5mmProvider:
 
         success = bool(
             payload["status"] == "PASS"
+            and payload["command_published"]
             and payload["provider_completed"]
             and payload["settled"]
             and not payload["timed_out"]
