@@ -1,6 +1,8 @@
 from __future__ import annotations
 from dataclasses import dataclass
 from .experience import ExperienceStore
+from .provenance import Provenance
+
 
 @dataclass(frozen=True)
 class OutcomeEstimate:
@@ -9,6 +11,11 @@ class OutcomeEstimate:
     mean_cost: float
     uncertainty: float
     method: str = "empirical_beta_baseline"
+    successes: int = 0
+    failures: int = 0
+    evidence_ids: tuple[str, ...] = ()
+    provenance_trace: tuple[Provenance, ...] = ()
+
 
 class EmpiricalOutcomeEstimator:
     """Simple inspectable baseline. Not a novel learning algorithm."""
@@ -34,13 +41,23 @@ class EmpiricalOutcomeEstimator:
         )
         n = len(records)
         successes = sum(1 for r in records if r.success)
+        failures = n - successes
         p = (successes + self.alpha) / (n + self.alpha + self.beta)
         mean_cost = sum(r.cost for r in records) / n if n else 0.0
-        # Conservative, inspectable proxy; decreases as evidence grows.
         uncertainty = 1.0 / (n + 1.0)
+        evidence_ids = tuple(
+            r.experience_id if r.identity_key() is not None else f"LEGACY:{i}"
+            for i, r in enumerate(records)
+        )
+        trace = tuple(r.provenance for r in records if r.provenance is not None)
         return OutcomeEstimate(
             success_probability=p,
             evidence_count=n,
             mean_cost=mean_cost,
             uncertainty=uncertainty,
+            method="explicit_beta_prior_no_evidence" if n == 0 else "empirical_beta_baseline",
+            successes=successes,
+            failures=failures,
+            evidence_ids=evidence_ids,
+            provenance_trace=trace,
         )

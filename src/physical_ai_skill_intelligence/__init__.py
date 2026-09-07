@@ -5,6 +5,7 @@ from .experience import ExperienceRecord, ExperienceStore, NOT_VERIFIED, UNRESOL
 from .outcome import OutcomeEstimate, EmpiricalOutcomeEstimator
 from .decision import Decision, CandidateDecision, DecisionEngine
 from .provenance import Provenance, SourceArtifact
+from .benchmark import DecisionBenchmarkResult, run_push_decision_benchmark
 
 __all__ = [
     "Goal",
@@ -22,4 +23,6 @@ __all__ = [
     "DecisionEngine",
     "Provenance",
     "SourceArtifact",
+    "DecisionBenchmarkResult",
+    "run_push_decision_benchmark",
 ]
