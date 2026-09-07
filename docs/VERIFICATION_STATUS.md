@@ -15,9 +15,10 @@ Independent reviewer audit passed M7.1, including source commit
 `1a200c7df53d2d24c18eeb787a5336c80cec9c52`. This documentation-only follow-up
 finalized M7.1 after independent reviewer approval. M8 is now ACTIVE. Trial001 did
 not establish physical +Z success. Its runtime failure/recovery boundary, the
-structured evidence serializer boundary, and the Trial002 evidence-path wiring
-boundary are now CLOSED. The current M8 boundary is the fresh Trial002 pre-motion
-machine/source gate.
+structured evidence serializer boundary, the Trial002 evidence-path wiring
+boundary, and the fresh Trial002 pre-motion machine/source boundary are now
+CLOSED. The current M8 boundary is explicit physical safety confirmation before
+one controlled +Z 5 mm Trial002.
 
 ```text
 AUTHORITATIVE_BRANCH = main
@@ -53,7 +54,7 @@ M7_1_FINALIZATION_STATUS = M7_1_FINALIZED_ON_MAIN
 ```text
 M8_STARTED = YES
 M8_STATUS = ACTIVE
-M8_GATE = TRIAL002_PRE_MOTION_FRESH_MACHINE_AND_SOURCE_GATE
+M8_GATE = TRIAL002_PHYSICAL_SAFETY_CONFIRMATION_GATE
 
 PHYSICAL_AI_ADAPTER_MERGE = f9c111e84c83eeea3352767a958688c29d6eb58e
 PROVIDER_ACTION_MERGE = 8733c1f0a1172200d5a0b42a3fea4cd76bc4bcc2
@@ -100,6 +101,22 @@ TRIAL002_RUNTIME_PROVIDER_IDENTITY = VERIFIED
 TRIAL002_EVIDENCE_PATH_WIRING = VERIFIED
 TRIAL002_EVIDENCE_PATH_WIRING_STATUS = CLOSED
 
+TRIAL002_PRE_MOTION_FRESH_MACHINE_AND_SOURCE_GATE = VERIFIED
+TRIAL002_PRE_MOTION_FRESH_MACHINE_AND_SOURCE_GATE_STATUS = CLOSED
+TRIAL002_PRE_MOTION_EVIDENCE_SHA256 = 2953509c56913a07a045d05cb1ff315d79054da4d36483668f6cc91a3f6a2336
+TRIAL002_PRE_MOTION_PAI_MAIN = 28b6e3da0a66c88ca385aa1ab3a725aa28205de3
+TRIAL002_PRE_MOTION_PROVIDER_MAIN = ce04cce26e486e5bd3c2dd77f85b91b4bf8d17f5
+TRIAL002_PRE_MOTION_PAI_SOURCE_UNCHANGED = VERIFIED
+TRIAL002_PRE_MOTION_PROVIDER_SOURCE_UNCHANGED = VERIFIED
+TRIAL002_PRE_MOTION_CANONICAL_INSTALL_SOURCE_MATCH = VERIFIED
+TRIAL002_PRE_MOTION_CANONICAL_READY = PA-000 / READY
+TRIAL002_PRE_MOTION_MOTION_CONTROLLER_GATE = PASS
+TRIAL002_PRE_MOTION_RTDE_RUNTIME_STATE = PLAYING(2), 5/5
+TRIAL002_PRE_MOTION_RTDE_SPEED_SCALING = 1.0, 5/5
+TRIAL002_PRE_MOTION_TARGET_SPEED_FRACTION = 0.02, 5/5
+TRIAL002_PRE_MOTION_COMBINED_SPEED_SCALING = 0.02, 5/5
+TRIAL002_PHYSICAL_SAFETY_CONFIRMATION = PENDING
+
 REAL_UR3_+Z_5MM_SUCCESS = NOT_VERIFIED
 REAL_UR3_PROVIDER_ADAPTER = NOT_VERIFIED
 REAL_ROBOT_EXECUTION = NOT_VERIFIED
@@ -110,8 +127,8 @@ WALL_CLOCK_BOUND = NOT_VERIFIED
 BOUNDED_REAL_RUNTIME_TERMINATION = NOT_VERIFIED
 
 SECOND_REAL_MOTION = BLOCKED
-NEXT_GATE = TRIAL002_PRE_MOTION_FRESH_MACHINE_AND_SOURCE_GATE
-STATUS = M8_ACTIVE_TRIAL002_PRE_MOTION_FRESH_GATE
+NEXT_GATE = TRIAL002_PHYSICAL_SAFETY_CONFIRMATION
+STATUS = M8_ACTIVE_TRIAL002_PHYSICAL_SAFETY_CONFIRMATION_GATE
 ```
 
 The first physical call reached the provider and activated
@@ -148,12 +165,21 @@ returned `BLOCKED_EXECUTION_REQUIRED` with no command publication, and atomicall
 wrote the structured JSON through `to_jsonable()`. No ROS mutation or physical
 motion occurred.
 
-This closes only the Trial002 evidence-path wiring/software provenance boundary.
-It does not establish real +Z success, real provider-adapter success, real robot
-execution, provider timeout/cancel, completed physical stop, or wall-clock bounds.
-Those claims remain NOT_VERIFIED. The next gate is a fresh source/machine readiness
-observation immediately before any physical authorization; it does not reopen any
-already CLOSED recovery or serializer capability.
+The fresh Trial002 pre-motion source/machine gate is also now closed. Physical AI
+main `28b6e3da0a66c88ca385aa1ab3a725aa28205de3` and provider main
+`ce04cce26e486e5bd3c2dd77f85b91b4bf8d17f5` matched the expected authoritative
+heads. Execution source was unchanged from the already-verified runner/provider
+boundaries, canonical installed READY/action source matched the pinned provider,
+canonical `ur3-ready` returned `PA-000`, all motion controllers were inactive, and
+5/5 direct RTDE samples showed PLAYING(2), raw scaling 1.0, target fraction 0.02,
+combined scaling 0.02, robot mode RUNNING, and safety NORMAL. This gate performed
+no ROS runtime mutation, Servo target, FPC activation, or physical motion.
+
+This closes only the Trial002 pre-motion source/machine readiness boundary. It does
+not establish real +Z success, real provider-adapter success, real robot execution,
+provider timeout/cancel, completed physical stop, or wall-clock bounds. Those
+claims remain NOT_VERIFIED. The next gate is explicit physical safety confirmation
+for one +Z 5 mm Trial002. The motion remains blocked until that confirmation.
 
 See [M7.1 verification](MILESTONE_7_1_VERIFICATION.md) for the implementation
 boundary, committed provider audit, adversarial coverage, and fresh rerun results:
