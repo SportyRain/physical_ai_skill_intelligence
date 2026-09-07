@@ -1,5 +1,9 @@
 # Physical AI Skill Intelligence
 
+> **GPT / Agent start:** Before substantial work, read
+> [PROJECT_START_HERE.md](PROJECT_START_HERE.md) and synchronize with the latest
+> authoritative project verification, status, and history.
+
 Clean-room software core for **Physical Decision Intelligence**.
 
 This project does not implement robot motion, visual servoing, planning, IK/FK, trajectory execution, camera drivers, or robot-specific manipulation. Existing robot repositories remain stable skill/evidence providers.

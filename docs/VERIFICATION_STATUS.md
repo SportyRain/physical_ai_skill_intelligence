@@ -1,5 +1,7 @@
 # Verification Status
 
+Chronological project decisions and rationale are recorded in [PROJECT_HISTORY.md](PROJECT_HISTORY.md).
+
 The canonical current claim ledger is [VERIFICATION_REPORT.txt](../VERIFICATION_REPORT.txt).
 Current test counts and commands are in [TEST_RESULTS.txt](../TEST_RESULTS.txt).
 The M7.1 claim scope below mirrors that ledger.
