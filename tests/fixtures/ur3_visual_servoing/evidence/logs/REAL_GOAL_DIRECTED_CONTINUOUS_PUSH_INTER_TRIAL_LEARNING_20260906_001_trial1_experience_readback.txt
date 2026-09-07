@@ -1,0 +1,9 @@
+EXPERIENCE_PATH = calibration_results/real_goal_directed_continuous_push_learning_20260906_plus_y_context_001.json
+TRIAL1_EXPERIENCE_STORED = YES
+STORED_OUTCOME = NORMAL_PROGRESS
+STORED_COMMAND_DISTANCE_M = 0.01
+STORED_ACTUAL_DISPLACEMENT_M = 0.005462250488132067
+STORED_EFFECTIVENESS = 0.5462250488132067
+CONTEXT_KEY = {"contact_offset_m":0.0,"contract":"REAL_PUSH_EFFECTIVENESS_V1","goal_displacement_y_m":0.02,"goal_tolerance_m":0.005,"object_radius_m":0.02,"pusher_radius_m":0.0045,"target_hue":4.7}
+EXPECTED_TRIAL2_FIRST_ACTION_M = 0.01830747239023034
+HARD_MAX_PRESERVED = True

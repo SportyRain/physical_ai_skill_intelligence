@@ -1,0 +1,48 @@
+{
+  "experiment_id": "REAL_UR3_PICK_PLACE_20260905_001",
+  "timestamp": null,
+  "repository": "SportyRain/ur3_visual_servoing",
+  "commit": "ef3fda64e8ea0d0e71133aa28760d76eaee40c26",
+  "branch": "main",
+  "milestone": "REAL_UR3_PICK_PLACE_FIRST_RUN",
+  "gate": "REAL_PICK_PLACE_PHYSICAL_EXECUTION",
+  "result": "PASS",
+  "physical_action": true,
+  "config_refs": [
+    "docs/VERIFIED_RUNTIME_COMMANDS_20260821.md",
+    "config/c270_auto_commission.json",
+    "calibration_results/c270_runtime_commission.json"
+  ],
+  "metrics": {
+    "target_hue": 4.7,
+    "tabletop_z_m": -0.01607223016496801,
+    "place_x_m": 0.29802477271139477,
+    "place_y_m": -0.22041342890638183,
+    "place_z_m": 0.02595709138970849,
+    "max_pick_attempts": 1,
+    "object_delta_z_mm": 49.91238586027824,
+    "tcp_delta_z_mm": 49.499682618450655,
+    "pick_attachment_vertical_residual_mm": 0.413,
+    "pick_attachment_comotion_residual_mm": 6.584,
+    "pick_attachment_relative_residual_mm": 6.584,
+    "pick_attachment_state": "ATTACHED_VERIFIED",
+    "runtime_final_status": "FAILURE",
+    "runtime_final_reason": "PLACE_RESULT_UNKNOWN_TARGET_NOT_VISIBLE"
+  },
+  "raw_evidence": [],
+  "video": "NOT_RECORDED",
+  "verified": [
+    "real UR3 approach/pick with suction",
+    "Pick attachment verified from object/TCP lift agreement",
+    "real carry to the user-taught Place target",
+    "vacuum release and retreat executed",
+    "physical Place outcome confirmed successful by the user"
+  ],
+  "not_verified": [
+    "autonomous post-Place camera verification in this physical run",
+    "generalization to arbitrary objects",
+    "generalization to arbitrary Place targets",
+    "full-workspace millimeter-level absolute camera accuracy"
+  ],
+  "notes": "Exact execution wall-clock timestamp was not preserved in the supplied terminal evidence, so timestamp is intentionally null rather than guessed. The physical task itself succeeded and the user directly confirmed that the object was placed correctly. The runtime nevertheless returned FAILURE because the post-Place fast-color observer could not reacquire the target at the taught Place position. No durable repository terminal transcript was preserved for this run, so raw_evidence is intentionally empty rather than inventing a path. The subsequent workspace integration fix and camera-read-only verification are indexed separately by REAL_UR3_PICK_PLACE_POST_PLACE_VERIFY_20260905_001."
+}

@@ -1,0 +1,54 @@
+{
+  "experiment_id": "REAL_GOAL_DIRECTED_CONTINUOUS_PUSH_INTER_TRIAL_LEARNING_20260906_001",
+  "timestamp": "2026-09-06T13:59:10+09:00",
+  "repository": "SportyRain/ur3_visual_servoing",
+  "commit": "ebbf273eee9ddc4fa46149bec38f5e820e6d4b12",
+  "branch": "main",
+  "milestone": "REAL_GOAL_DIRECTED_CONTINUOUS_PUSH_INTER_TRIAL_LEARNING",
+  "gate": "REAL_INTER_TRIAL_LEARNING",
+  "result": "PASS",
+  "physical_action": true,
+  "config_refs": [
+    "src/ur3_visual_servoing/runtime/goal_directed_continuous_push_learning.py",
+    "src/ur3_visual_servoing/runtime/push_trial_adaptation.py",
+    "calibration_results/c270_runtime_commission.json"
+  ],
+  "metrics": {
+    "direction": "+Y",
+    "relative_goal_displacement_m": 0.015,
+    "nominal_baseline_push_distance_m": 0.01,
+    "hard_max_push_distance_m": 0.02,
+    "goal_tolerance_m": 0.005,
+    "runtime_experience_path": "calibration_results/real_goal_directed_continuous_push_learning_20260906_plus_y_context_001.json",
+    "trial1_first_action_m": 0.01,
+    "trial1_attempt_count": 2,
+    "trial1_final_goal_error_m": 0.0042978780296678105,
+    "trial1_stored_outcome": "NORMAL_PROGRESS",
+    "trial1_stored_actual_displacement_m": 0.005462250488132067,
+    "trial1_stored_effectiveness": 0.5462250488132067,
+    "trial2_effective_push_distance_m": 0.01830747239023034,
+    "trial2_first_action_m": 0.014989337122087346,
+    "trial2_attempt_count": 3,
+    "trial2_final_goal_error_m": 0.004105837257017707,
+    "action_changed_from_trial1": true,
+    "hard_max_preserved": true
+  },
+  "raw_evidence": [
+    "evidence/logs/REAL_GOAL_DIRECTED_CONTINUOUS_PUSH_INTER_TRIAL_LEARNING_20260906_001_terminal_excerpt.txt",
+    "evidence/logs/REAL_GOAL_DIRECTED_CONTINUOUS_PUSH_INTER_TRIAL_LEARNING_20260906_001_trial1_experience_readback.txt"
+  ],
+  "video": "NOT_RECORDED",
+  "verified": [
+    "REAL_INTER_TRIAL_LEARNING",
+    "TRIAL1_EXPERIENCE_PERSISTED",
+    "TRIAL2_EXPERIENCE_LOADED_TO_CHANGE_FIRST_ACTION",
+    "HARD_MAX_SAFETY_CEILING_PRESERVED_FOR_TESTED_PLUS_Y_15MM_CONDITION"
+  ],
+  "not_verified": [
+    "REAL_LEARNING_IMPROVEMENT",
+    "REAL_SELF_LEARNING",
+    "CROSS_DIRECTION_EXPERIENCE_GENERALIZATION",
+    "REPEATABLE_PERFORMANCE_IMPROVEMENT"
+  ],
+  "notes": "Actual +Y 15 mm inter-trial action change verified: first action changed from 10.000 mm to 14.989337 mm. Trial 2 required 3 attempts versus Trial 1's 2, so performance improvement remains NOT_VERIFIED. Canonical raw evidence links point only to tracked files on main; runtime-generated local originals remain outside the canonical manifest."
+}
