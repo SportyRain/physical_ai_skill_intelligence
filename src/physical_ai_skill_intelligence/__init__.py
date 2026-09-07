@@ -6,6 +6,17 @@ from .outcome import OutcomeEstimate, EmpiricalOutcomeEstimator
 from .decision import Decision, CandidateDecision, DecisionEngine
 from .provenance import Provenance, SourceArtifact
 from .benchmark import DecisionBenchmarkResult, run_push_decision_benchmark
+from .recovery import (
+    FailureState,
+    RecoverySpec,
+    RecoveryExperienceRecord,
+    RecoveryExperienceStore,
+    RecoveryOutcomeEstimate,
+    EmpiricalRecoveryOutcomeEstimator,
+    RecoveryCandidateDecision,
+    RecoveryDecision,
+    RecoveryDecisionEngine,
+)
 
 __all__ = [
     "Goal",
@@ -25,4 +36,13 @@ __all__ = [
     "SourceArtifact",
     "DecisionBenchmarkResult",
     "run_push_decision_benchmark",
+    "FailureState",
+    "RecoverySpec",
+    "RecoveryExperienceRecord",
+    "RecoveryExperienceStore",
+    "RecoveryOutcomeEstimate",
+    "EmpiricalRecoveryOutcomeEstimator",
+    "RecoveryCandidateDecision",
+    "RecoveryDecision",
+    "RecoveryDecisionEngine",
 ]
