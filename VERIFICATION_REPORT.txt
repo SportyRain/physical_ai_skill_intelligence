@@ -1,5 +1,5 @@
 REPOSITORY = SportyRain/physical_ai_skill_intelligence
-AUTHORITATIVE_BRANCH = m6.1-integrity-hardening
+AUTHORITATIVE_BRANCH = main
 REPOSITORY_ESTABLISHED = VERIFIED
 GITHUB_WRITE_AVAILABLE = YES
 
