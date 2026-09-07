@@ -82,14 +82,19 @@ def real_provider(committed_snapshot, monkeypatch):
 def test_real_committed_callable_normalization_and_bounded_loop(
         real_provider, geometry, facts, record_property):
     provider, provenance = real_provider
+    assert adapter.attest_provider_source(
+        provider, provenance, os.environ["M7_PROVIDER_REPOSITORY"],
+        adapter.PROVIDER_MODULE, adapter.PROVIDER_CALLABLE)["status"] == "VERIFIED"
     scene = importlib.import_module("ur3_visual_servoing.vision.scene_objects")
     observed = scene.SceneObject("support", "support", 0.9, scene.BBox2D(10, 20, 30, 40),
                                  (0.3, -0.2, 0.04))
     direct = provider.compute_on_top_of_place_target(observed, provider.OnTopOfGeometry(**geometry))
-    boundary = adapter.RelationalPlaceTargetProvider(geometry, provenance)
+    boundary = adapter.RelationalPlaceTargetProvider(
+        geometry, provenance, os.environ["M7_PROVIDER_REPOSITORY"])
     goal, state = Goal("ON_TOP_OF", "picked", "support"), WorldState(facts)
     normalized = boundary.execute(adapter.SKILL_NAME, goal, state)
     assert normalized.action_success and normalized.failure_code is None
+    assert normalized.observations["runtime_provider_identity"]["status"] == "VERIFIED"
     target = normalized.observations["target"]
     assert target["picked_object_center_xyz_m"] == direct.picked_object_center_xyz_m
     assert target["picked_object_center_xyz_m"] == (0.3, -0.2, 0.1)
@@ -123,21 +128,32 @@ def test_real_committed_callable_normalization_and_bounded_loop(
     ("support_margin_m", -0.001), ("support_margin_m", 0.05),
     ("support_margin_m", 0.06), ("z_tolerance_m", 0),
 ])
-def test_real_provider_input_rejection(real_provider, geometry, facts, field, value, monkeypatch):
+def test_real_provider_input_rejection(real_provider, geometry, facts, field, value):
     provider, provenance = real_provider
     geometry[field] = value
-    def must_not_call(*args):
-        pytest.fail("rejected constructor input must not reach target computation")
-    monkeypatch.setattr(provider, "compute_on_top_of_place_target", must_not_call)
-    result = adapter.RelationalPlaceTargetProvider(geometry, provenance).execute(
-        adapter.SKILL_NAME, Goal("ON_TOP_OF", "picked", "support"), WorldState(facts))
+    # Trace without replacing attested code: rejected constructors must not
+    # reach target computation.
+    calls = []
+    def profile(frame, event, arg):
+        if event == "call" and frame.f_code is provider.compute_on_top_of_place_target.__code__:
+            calls.append(frame.f_code)
+    previous = sys.getprofile()
+    sys.setprofile(profile)
+    try:
+        result = adapter.RelationalPlaceTargetProvider(
+            geometry, provenance, os.environ["M7_PROVIDER_REPOSITORY"]).execute(
+            adapter.SKILL_NAME, Goal("ON_TOP_OF", "picked", "support"), WorldState(facts))
+    finally:
+        sys.setprofile(previous)
     assert not result.action_success and result.failure_code == "INVALID_PROVIDER_INPUT"
+    assert not calls
 
 
 def test_real_bbox_rejection(real_provider, geometry, facts):
     _, provenance = real_provider
     facts["objects"]["support"]["bbox_xyxy"] = [1, 1, 0, 0]
-    result = adapter.RelationalPlaceTargetProvider(geometry, provenance).execute(
+    result = adapter.RelationalPlaceTargetProvider(
+        geometry, provenance, os.environ["M7_PROVIDER_REPOSITORY"]).execute(
         adapter.SKILL_NAME, Goal("ON_TOP_OF", "picked", "support"), WorldState(facts))
     assert result.failure_code == "INVALID_PROVIDER_INPUT"
 
@@ -145,6 +161,7 @@ def test_real_bbox_rejection(real_provider, geometry, facts):
 def test_real_finite_input_overflow_rejected_as_invalid_result(real_provider, geometry, facts):
     _, provenance = real_provider
     geometry.update(tabletop_z_m=1.7e308, destination_object_height_m=1.7e308)
-    result = adapter.RelationalPlaceTargetProvider(geometry, provenance).execute(
+    result = adapter.RelationalPlaceTargetProvider(
+        geometry, provenance, os.environ["M7_PROVIDER_REPOSITORY"]).execute(
         adapter.SKILL_NAME, Goal("ON_TOP_OF", "picked", "support"), WorldState(facts))
     assert not result.action_success and result.failure_code == "INVALID_PROVIDER_RESULT"

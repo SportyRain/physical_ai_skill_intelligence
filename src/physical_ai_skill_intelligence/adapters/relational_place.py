@@ -3,8 +3,8 @@
 Geometry is explicit immutable configuration; destination observations come from
 WorldState.objects[goal.reference]. No hardware dimensions or observations are
 inferred. Success means a target was computed, never that placement occurred.
-The caller supplies source provenance; Git identity is verified by integration
-tests, not inferred from an installed package version.
+The caller supplies pinned provenance and a configurable Git repository path.
+Runtime loaded source identity is checked before provider constructors/calls.
 """
 from collections.abc import Mapping
 from dataclasses import asdict, dataclass
@@ -16,6 +16,7 @@ from ..goal import Goal
 from ..provenance import Provenance, validate_commit
 from ..provider_contract import ProviderResult
 from ..state import WorldState
+from ._source_attestation import attest_provider_source
 
 SKILL_NAME = "COMPUTE_ON_TOP_OF_PLACE_TARGET"
 PROVIDER_REPOSITORY = "SportyRain/ur3_visual_servoing"
@@ -50,6 +51,7 @@ def _vector(value, length):
 class RelationalPlaceTargetProvider:
     geometry: Mapping[str, float]
     provenance: Provenance
+    provider_repository: str | None = None
 
     def __post_init__(self):
         object.__setattr__(self, "geometry", snapshot_mapping(self.geometry))
@@ -61,11 +63,14 @@ class RelationalPlaceTargetProvider:
                 or self.provenance.source_record_id != PROVIDER_CALLABLE):
             raise ValueError("provenance must identify the exact software capability")
 
-    def _result(self, success, *, failure_code=None, observations=None, metrics=None):
+    def _result(self, success, *, failure_code=None, observations=None, metrics=None,
+                runtime_identity=None):
         return ProviderResult(
             success,
             {"capability_id": f"{PROVIDER_MODULE}.{PROVIDER_CALLABLE}",
-             "capability_kind": "SOFTWARE_TARGET_COMPUTATION", **(observations or {})},
+             "capability_kind": "SOFTWARE_TARGET_COMPUTATION",
+             "runtime_provider_identity": runtime_identity or {"status": "NOT_VERIFIED"},
+             **(observations or {})},
             failure_code, metrics, self.provenance,
         )
 
@@ -114,6 +119,15 @@ class RelationalPlaceTargetProvider:
                                 observations={"exception_type": type(exc).__name__})
 
         try:
+            runtime_identity = attest_provider_source(
+                provider, self.provenance, self.provider_repository,
+                PROVIDER_MODULE, PROVIDER_CALLABLE,
+            )
+        except Exception as exc:
+            return self._result(False, failure_code="RUNTIME_PROVIDER_IDENTITY_UNVERIFIED",
+                                observations={"exception_type": type(exc).__name__})
+
+        try:
             # Provider-owned input validation includes support margin/radius and
             # bbox bounds. These constructors perform no geometry planning.
             geometry = provider.OnTopOfGeometry(**self.geometry)
@@ -125,16 +139,19 @@ class RelationalPlaceTargetProvider:
             )
         except (ValueError, TypeError) as exc:
             return self._result(False, failure_code="INVALID_PROVIDER_INPUT",
-                                observations={"exception_type": type(exc).__name__})
+                                observations={"exception_type": type(exc).__name__},
+                                runtime_identity=runtime_identity)
         except Exception as exc:
             return self._result(False, failure_code="PROVIDER_CALL_FAILED",
-                                observations={"exception_type": type(exc).__name__})
+                                observations={"exception_type": type(exc).__name__},
+                                runtime_identity=runtime_identity)
 
         try:
             target = provider.compute_on_top_of_place_target(observed, geometry)
         except Exception as exc:
             return self._result(False, failure_code="PROVIDER_CALL_FAILED",
-                                observations={"exception_type": type(exc).__name__})
+                                observations={"exception_type": type(exc).__name__},
+                                runtime_identity=runtime_identity)
         try:
             if not isinstance(target, provider.ObjectRelativePlaceTarget):
                 raise ValueError("unexpected provider result type")
@@ -146,7 +163,9 @@ class RelationalPlaceTargetProvider:
                 raise ValueError("provider source observation mismatch")
             # Preserve the provider target unchanged. No placement math or state
             # updates here; even finite inputs can yield nonfinite outputs.
-            return self._result(True, observations={"target": asdict(target)}, metrics={})
+            return self._result(True, observations={"target": asdict(target)}, metrics={},
+                                runtime_identity=runtime_identity)
         except Exception as exc:
             return self._result(False, failure_code="INVALID_PROVIDER_RESULT",
-                                observations={"exception_type": type(exc).__name__})
+                                observations={"exception_type": type(exc).__name__},
+                                runtime_identity=runtime_identity)

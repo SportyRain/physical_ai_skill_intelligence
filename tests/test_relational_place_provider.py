@@ -54,6 +54,10 @@ def fake_provider(monkeypatch):
                             BBox2D=Mock(side_effect=lambda *args: args))
     loader = Mock(side_effect=lambda name: module if name == adapter.PROVIDER_MODULE else scene)
     monkeypatch.setattr(adapter, "import_module", loader)
+    # Existing M7 tests isolate mapping/failure normalization. Runtime source
+    # attestation is exercised without this stub in the dedicated contract and
+    # committed external integration suites.
+    monkeypatch.setattr(adapter, "attest_provider_source", Mock(return_value={"status": "UNIT_TEST_STUB"}))
     return module, scene, loader
 
 
@@ -246,6 +250,7 @@ def test_provider_result_failure_and_metrics_survive_bridge(provenance):
                             {"diagnostic_count": 2.0}, provenance)
     observation = software_result_to_observation(result)
     assert observation.failure.code == "PROVIDER_CALL_FAILED"
-    assert observation.terminal_failure and not observation.retryable
+    assert not observation.terminal_failure and not observation.retryable
+    assert observation.details["failure_retryability"] == "unknown"
     assert observation.details["provider_metrics"] == {"diagnostic_count": 2.0}
     assert observation.cost == 0 and observation.state_updates == {}
