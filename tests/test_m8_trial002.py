@@ -9,6 +9,10 @@ from physical_ai_skill_intelligence.provider_contract import ProviderResult
 PAI_COMMIT = "1" * 40
 PROVIDER_COMMIT = "2" * 40
 PROVIDER_SHA256 = "a" * 64
+RELATED_SHA256 = {
+    path: (hex(index + 11)[2:] * 64)[:64]
+    for index, path in enumerate(runner.REQUIRED_RELATED_SOURCE_PATHS)
+}
 
 
 class FakeProvider:
@@ -45,6 +49,7 @@ def run(tmp_path, monkeypatch, **overrides):
         physical_ai_commit=PAI_COMMIT,
         provider_commit=PROVIDER_COMMIT,
         provider_raw_sha256=PROVIDER_SHA256,
+        provider_related_sources_sha256=RELATED_SHA256,
         provider_repository="/tmp/provider",
         output_path=tmp_path / "trial.json",
     )
@@ -56,18 +61,28 @@ def test_trial002_defaults_fail_closed_and_writes_json(tmp_path, monkeypatch):
     record, values = run(tmp_path, monkeypatch)
 
     assert FakeProvider.calls[0][0] == "init"
+    provenance = FakeProvider.calls[0][1]
     assert FakeProvider.calls[0][2]["execute_real"] is False
     assert FakeProvider.calls[1][0] == "execute"
+    assert tuple(item.source_path for item in provenance.related_sources) == (
+        runner.REQUIRED_RELATED_SOURCE_PATHS
+    )
+    assert {
+        item.source_path: item.raw_sha256 for item in provenance.related_sources
+    } == RELATED_SHA256
+
     assert record["execute_real"] is False
     assert record["axis"] == "Z"
     assert record["requested_translation_m"] == 0.005
     assert record["serialization"] == "to_jsonable"
+    assert record["provider_related_sources_sha256"] == RELATED_SHA256
     assert record["result"]["failure_code"] == "BLOCKED_EXECUTION_REQUIRED"
 
     written = json.loads(values["output_path"].read_text(encoding="utf-8"))
     assert written["trial_id"] == "M8_TRIAL002_DRYRUN"
     assert written["physical_ai_commit"] == PAI_COMMIT
     assert written["provider_commit"] == PROVIDER_COMMIT
+    assert written["provider_related_sources_sha256"] == RELATED_SHA256
     assert written["result"]["observations"]["provider_result"][
         "provider_completed"
     ] is True
@@ -109,6 +124,7 @@ def test_existing_output_blocks_before_provider_construction(tmp_path, monkeypat
             physical_ai_commit=PAI_COMMIT,
             provider_commit=PROVIDER_COMMIT,
             provider_raw_sha256=PROVIDER_SHA256,
+            provider_related_sources_sha256=RELATED_SHA256,
             provider_repository="/tmp/provider",
             output_path=output,
         )
@@ -140,6 +156,7 @@ def test_bad_identity_inputs_fail_before_provider(tmp_path, monkeypatch):
             physical_ai_commit="bad",
             provider_commit=PROVIDER_COMMIT,
             provider_raw_sha256=PROVIDER_SHA256,
+            provider_related_sources_sha256=RELATED_SHA256,
             provider_repository="/tmp/provider",
             output_path=tmp_path / "bad1.json",
         )
@@ -151,8 +168,37 @@ def test_bad_identity_inputs_fail_before_provider(tmp_path, monkeypatch):
             physical_ai_commit=PAI_COMMIT,
             provider_commit=PROVIDER_COMMIT,
             provider_raw_sha256="bad",
+            provider_related_sources_sha256=RELATED_SHA256,
             provider_repository="/tmp/provider",
             output_path=tmp_path / "bad2.json",
+        )
+
+    incomplete = dict(RELATED_SHA256)
+    incomplete.pop(next(iter(incomplete)))
+    with pytest.raises(ValueError, match="exactly the required"):
+        runner.run_trial002_positive_axis_5mm(
+            trial_id="M8_TRIAL002",
+            axis="Z",
+            physical_ai_commit=PAI_COMMIT,
+            provider_commit=PROVIDER_COMMIT,
+            provider_raw_sha256=PROVIDER_SHA256,
+            provider_related_sources_sha256=incomplete,
+            provider_repository="/tmp/provider",
+            output_path=tmp_path / "bad3.json",
+        )
+
+    extra = dict(RELATED_SHA256)
+    extra["src/ur3_visual_servoing/unexpected.py"] = "f" * 64
+    with pytest.raises(ValueError, match="exactly the required"):
+        runner.run_trial002_positive_axis_5mm(
+            trial_id="M8_TRIAL002",
+            axis="Z",
+            physical_ai_commit=PAI_COMMIT,
+            provider_commit=PROVIDER_COMMIT,
+            provider_raw_sha256=PROVIDER_SHA256,
+            provider_related_sources_sha256=extra,
+            provider_repository="/tmp/provider",
+            output_path=tmp_path / "bad4.json",
         )
 
     assert FakeProvider.calls == []
