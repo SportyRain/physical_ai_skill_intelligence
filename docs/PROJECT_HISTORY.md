@@ -717,3 +717,72 @@ runner contract. Do not reopen or re-run the CLOSED runtime recovery, serializer
 or evidence-path capability absent contradictory evidence. A single +Z 5 mm
 physical Trial002 remains blocked until this fresh gate and renewed physical safety
 confirmation pass.
+
+## 2026-09-08 — M8 Trial002 fresh pre-motion machine/source gate closed
+
+DATE = 2026-09-08
+
+MILESTONE / DECISION = Trial002 fresh pre-motion machine/source boundary VERIFIED
+and CLOSED; M8 remains ACTIVE and advances only to explicit physical safety
+confirmation.
+
+WHAT_CHANGED = No recovery, serializer, evidence-path, controller, or robot-control
+logic was changed or re-run. Immediately before physical authorization, the
+current authoritative Physical AI main and provider main were pinned and compared
+to the already-verified execution boundaries. Physical AI main was
+`28b6e3da0a66c88ca385aa1ab3a725aa28205de3`; provider main was
+`ce04cce26e486e5bd3c2dd77f85b91b4bf8d17f5`. Execution source delta checks were
+zero, canonical installed READY/action source bytes matched the pinned provider,
+canonical `ur3-ready --json` returned `PA-000 / READY`, all motion controllers
+were inactive, and direct RTDE produced 5/5 consecutive execution-capable samples.
+No ROS runtime mutation, Servo target, FPC activation, or physical motion occurred.
+
+WHY = The final pre-motion boundary must establish that no source or machine-state
+drift occurred after the already-closed serializer/evidence-path gates and before
+asking for physical authorization. This is a fresh observation, not a reopening of
+the CLOSED runtime recovery capability.
+
+EVIDENCE =
+- Fresh gate log:
+  `/home/rosystem/ur_projects/physical_ai_evidence/M8_REAL_UR3_20260908/M8_TRIAL002_PRE_MOTION_FRESH_GATE_20260908_025249.log`
+- Fresh gate SHA256:
+  `2953509c56913a07a045d05cb1ff315d79054da4d36483668f6cc91a3f6a2336`
+- Physical AI main: `28b6e3da0a66c88ca385aa1ab3a725aa28205de3`
+- Provider main: `ce04cce26e486e5bd3c2dd77f85b91b4bf8d17f5`
+- `PAI_MAIN_GATE=PASS`, `PROVIDER_MAIN_GATE=PASS`.
+- `PAI_EXECUTION_SOURCE_UNCHANGED=YES`.
+- `PROVIDER_EXECUTION_SOURCE_UNCHANGED=YES`.
+- `CANONICAL_INSTALL_SOURCE_MATCH=YES`.
+- READY/action source SHA256 matched canonical installed copies.
+- `READY_CODE=PA-000`, `READY_RC=0`.
+- External Control true; robot mode 7; safety mode 1.
+- ROS speed scaling broadcaster output `2.0` percent.
+- Motion controllers all inactive; `MOTION_CONTROLLER_GATE=PASS`.
+- RTDE 5/5: `runtime_state=PLAYING(2)`, raw `speed_scaling=1.0`,
+  `target_speed_fraction=0.02`, combined `0.02`, robot mode 7, safety mode 1.
+- `RTDE_FRESH_MACHINE_GATE=PASS`.
+- `TRIAL002_PRE_MOTION_FRESH_MACHINE_AND_SOURCE_GATE=PASS`.
+- Physical action NO; ROS runtime mutation NO; Servo target NO; FPC activation NO.
+
+REVIEW_DECISION =
+`TRIAL002_PRE_MOTION_FRESH_MACHINE_AND_SOURCE_GATE = VERIFIED`.
+`TRIAL002_PRE_MOTION_FRESH_MACHINE_AND_SOURCE_GATE_STATUS = CLOSED`.
+The next boundary is physical safety confirmation only. This closure does not
+constitute motion authorization.
+
+UNRESOLVED =
+`M8_TRIAL002_PHYSICAL_SAFETY_CONFIRMATION = PENDING`.
+`REAL_UR3_+Z_5MM_SUCCESS = NOT_VERIFIED`.
+`REAL_UR3_PROVIDER_ADAPTER = NOT_VERIFIED`.
+`REAL_ROBOT_EXECUTION = NOT_VERIFIED`.
+`PROVIDER_TIMEOUT = NOT_VERIFIED`.
+`PROVIDER_CANCEL = NOT_VERIFIED`.
+`PHYSICAL_STOP_AFTER_CANCEL = NOT_VERIFIED`.
+`WALL_CLOCK_BOUND = NOT_VERIFIED`.
+`BOUNDED_REAL_RUNTIME_TERMINATION = NOT_VERIFIED`.
+M8 as a whole remains ACTIVE and is not closed.
+
+NEXT = `TRIAL002_PHYSICAL_SAFETY_CONFIRMATION`: confirm immediately before motion
+that the work area is clear, the +Z 5 mm path is clear, and the emergency stop is
+accessible. Until those three conditions are explicitly confirmed, the second
+real motion remains BLOCKED.
