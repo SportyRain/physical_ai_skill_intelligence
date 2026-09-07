@@ -17,6 +17,14 @@ from .recovery import (
     RecoveryDecision,
     RecoveryDecisionEngine,
 )
+from .recovery_importers import (
+    RecoveryEvidenceImportError,
+    Ur3VisualServoingRecoveryEvidenceImporter,
+)
+from .recovery_benchmark import (
+    RecoveryEvidenceBenchmarkResult,
+    run_ready_recovery_decision_benchmark,
+)
 
 __all__ = [
     "Goal",
@@ -45,4 +53,8 @@ __all__ = [
     "RecoveryCandidateDecision",
     "RecoveryDecision",
     "RecoveryDecisionEngine",
+    "RecoveryEvidenceImportError",
+    "Ur3VisualServoingRecoveryEvidenceImporter",
+    "RecoveryEvidenceBenchmarkResult",
+    "run_ready_recovery_decision_benchmark",
 ]

@@ -1,0 +1,48 @@
+{
+  "experiment_id": "REAL_READY_STALE_CLEANUP_20260831_001",
+  "timestamp": "2026-08-31T19:49:02.095+09:00",
+  "repository": "SportyRain/ur3_visual_servoing",
+  "commit": "abbbf62489636641a9cada2d718af01304048cc5",
+  "branch": "fix/ready-stale-controller-auto-cleanup-20260831",
+  "milestone": "CANONICAL_READY_STALE_FORCE_PASSTHROUGH_AUTO_CLEANUP",
+  "gate": "REAL_UR3_EXACT_STALE_PAIR_AUTO_CLEANUP",
+  "result": "PASS",
+  "physical_action": true,
+  "config_refs": [
+    "docs/PHYSICAL_AI_CURRENT_STATE.md",
+    "docs/PHYSICAL_AI_PROGRAM_REGISTRY.md",
+    "docs/VERIFIED_RUNTIME_COMMANDS_20260821.md",
+    "docs/history/2026/08/20260831_READY_POST_RECOVERY_CONTROLLER_GUARD.md",
+    "docs/history/2026/08/20260831_READY_COHERENT_SNAPSHOT_STALE_AUTO_CLEANUP.md"
+  ],
+  "metrics": {
+    "pre_ready_code": "PA-000",
+    "stale_pair_reproduced": true,
+    "check_only_code": "PA-READY-818",
+    "execute_code": "PA-000",
+    "execute_rc": 0,
+    "post_program_running": true,
+    "post_passthrough_trajectory_controller": "inactive",
+    "post_force_mode_controller": "inactive",
+    "final_ready_code": "PA-000",
+    "final_rc": 0
+  },
+  "raw_evidence": [
+    "evidence/logs/REAL_READY_STALE_CLEANUP_20260831_001_terminal_transcript.txt"
+  ],
+  "video": "NOT_RECORDED",
+  "verified": [
+    "exact stale passthrough_trajectory_controller + force_mode_controller active pair can be reproduced without trajectory or force target command",
+    "check-only READY detects the stale pair as PA-READY-818 without mutating controller state",
+    "READY --execute cleans the exact stale pair and returns PA-000",
+    "passthrough_trajectory_controller and force_mode_controller are inactive after cleanup",
+    "program_running remains true after cleanup",
+    "final check-only READY returns PA-000"
+  ],
+  "not_verified": [
+    "automatic cleanup of arbitrary noncanonical controller combinations",
+    "automatic recovery of all future runtime failures",
+    "controller mutation while an active task is running"
+  ],
+  "notes": "The tracked terminal transcript preserves the state/result lines from the user-supplied real UR3 validation output. ROS log timestamp from stale-pair confirmation is used for this manifest timestamp."
+}

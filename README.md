@@ -35,6 +35,9 @@ Goal + Current World State + Failure + Candidate Recoveries + Past Recovery Expe
 -> Recovery Ranking / Selection
 ```
 
+Milestone 5 connects tracked real failure/recovery evidence to that recovery
+decision path without executing the provider or the robot.
+
 ## Authoritative repository
 
 ```text
@@ -56,13 +59,16 @@ status: VERIFIED
 - failure-aware recovery experience representation
 - exact failure-code / attribution / context matching
 - deterministic recovery outcome estimation and ranking
+- read-only import of tracked real recovery evidence
+- real recovery provenance trace through outcome estimate and recovery decision
 - offline negative and regression tests
 
 ## Stable provider investigated
 
 ```text
 SportyRain/ur3_visual_servoing
-inspection commit: b91d3be5a7643f6e91023da8c9d7f339811c7b14
+Milestone 1-3 inspection commit: b91d3be5a7643f6e91023da8c9d7f339811c7b14
+Milestone 5 recovery-evidence snapshot: fec0021d0d7b4ee076842923e7627f1e7486fa71
 ```
 
 The repository does not copy its controller, perception, ROS, MoveIt, or robot execution implementation. Milestone 4 also does not execute or modify provider-side recovery behavior.
@@ -117,12 +123,26 @@ Recovery evidence matches exact goal, state context, failure code, failure attri
 
 The recovery estimator is an inspectable Beta-prior baseline, not a learned controller or novel AI algorithm. It selects only a high-level recovery identity; it does not generate motion.
 
+## Real recovery evidence integration
+
+Milestone 5 imports the tracked provider pair:
+
+```text
+evidence/runs/REAL_READY_STALE_CLEANUP_20260831_001.json
+evidence/logs/REAL_READY_STALE_CLEANUP_20260831_001_terminal_transcript.txt
+```
+
+The raw transcript explicitly records `PA-READY-818 / NONCANONICAL_CONTROLLER_ACTIVE`, the exact stale ForceMode/Passthrough controller pair, one execute cleanup, canonical inactive controller states afterward, and final `PA-000 / READY`.
+
+The normalized record uses the existing provider high-level action identity `CLEAN_STALE_FORCE_PASSTHROUGH`. In the offline benchmark the no-evidence tie selects `LEAVE_CONTROLLER_UNCHANGED`; with the one applicable real recovery record, `CLEAN_STALE_FORCE_PASSTHROUGH` is selected with `P(recovery_success)=2/3` and evidence count 1. This verifies evidence influence, not general decision superiority.
+
 ## Verification status
 
 ```text
 CLEAN_BASELINE = 12 passed
 PRE_M4_CURRENT_MAIN = 22 passed
-CURRENT_TOTAL = 30 passed
+PRE_M5_CURRENT_MAIN = 30 passed
+CURRENT_TOTAL = 36 passed
 PYTHON_COMPILE = PASS
 
 MULTI_EXPERIENCE_MODEL = VERIFIED
@@ -139,7 +159,14 @@ RECOVERY_OUTCOME_ESTIMATION_BASELINE = VERIFIED
 DETERMINISTIC_RECOVERY_RANKING = VERIFIED
 OFFLINE_RECOVERY_REGRESSION = VERIFIED
 
-REAL_RECOVERY_EVIDENCE_IMPORT = NOT_VERIFIED
+MILESTONE_5_REAL_RECOVERY_EVIDENCE_INTEGRATION = VERIFIED
+REAL_RECOVERY_EVIDENCE_IMPORT = VERIFIED
+REAL_RECOVERY_PROVENANCE_TRACEABILITY = VERIFIED
+REAL_RECOVERY_EVIDENCE_INFLUENCES_ESTIMATE = VERIFIED
+REAL_RECOVERY_EVIDENCE_INFLUENCES_DECISION = VERIFIED
+OFFLINE_REAL_RECOVERY_EVIDENCE_REGRESSION = VERIFIED
+SELECTED_RECOVERY_CHANGED_IN_OFFLINE_REAL_EVIDENCE_BENCHMARK = YES
+
 REAL_RECOVERY_PROVIDER_ADAPTER = NOT_VERIFIED
 REAL_UR3_PROVIDER_ADAPTER = NOT_VERIFIED
 REAL_ROBOT_EXECUTION = NOT_VERIFIED
@@ -149,7 +176,7 @@ SELF_LEARNING = NOT_VERIFIED
 NOVEL_AI_ALGORITHM = NOT_VERIFIED
 ```
 
-See `docs/MILESTONE_1_3_VERIFICATION.md` and `docs/MILESTONE_4_VERIFICATION.md` for verification boundaries.
+See `docs/MILESTONE_1_3_VERIFICATION.md`, `docs/MILESTONE_4_VERIFICATION.md`, and `docs/MILESTONE_5_VERIFICATION.md` for verification boundaries.
 
 ## Run
 

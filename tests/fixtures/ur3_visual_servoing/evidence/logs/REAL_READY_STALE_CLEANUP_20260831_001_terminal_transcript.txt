@@ -1,0 +1,85 @@
+=== SOURCE CONTRACT ===
+READY_SOURCE = /tmp/ready_persistent_abbbf624/src/ur3_visual_servoing/runtime/ready.py
+HAS_PERSISTENT_SESSION = True
+HAS_STALE_CLEANUP = True
+
+=== PRE READY ===
+{
+  "code": "PA-000",
+  "first_blocker": "NONE",
+  "mode": "CHECK_ONLY",
+  "next_action": "NONE",
+  "physical_action": "NO",
+  "ready": true,
+  "status": "READY"
+}
+PRE_RC=0
+
+=== PRE CONTROLLERS ===
+forward_position_controller        position_controllers/JointGroupPositionController             inactive
+scaled_joint_trajectory_controller ur_controllers/ScaledJointTrajectoryController                inactive
+passthrough_trajectory_controller  ur_controllers/PassthroughTrajectoryController                inactive
+force_mode_controller              ur_controllers/ForceModeController                            inactive
+freedrive_mode_controller          ur_controllers/FreedriveModeController                        inactive
+
+=== ACTIVATE EXACT STALE PAIR ===
+response:
+controller_manager_msgs.srv.SwitchController_Response(ok=True, message='Successfully switched controllers!')
+
+=== STALE PAIR CONFIRM ===
+forward_position_controller        position_controllers/JointGroupPositionController             inactive
+scaled_joint_trajectory_controller ur_controllers/ScaledJointTrajectoryController                inactive
+passthrough_trajectory_controller  ur_controllers/PassthroughTrajectoryController                active
+force_mode_controller              ur_controllers/ForceModeController                            active
+freedrive_mode_controller          ur_controllers/FreedriveModeController                        inactive
+STALE_PAIR_REPRODUCED=YES
+
+=== CHECK-ONLY MUST FAIL CLOSED ===
+{
+  "code": "PA-READY-818",
+  "first_blocker": "NONCANONICAL_CONTROLLER_ACTIVE",
+  "mode": "CHECK_ONLY",
+  "next_action": "LEAVE_CONTROLLER_UNCHANGED",
+  "physical_action": "NO",
+  "ready": false,
+  "status": "BUSY"
+}
+CHECK_RC=2
+
+=== EXECUTE AUTO CLEANUP ===
+{
+  "code": "PA-000",
+  "first_blocker": "NONE",
+  "mode": "EXECUTE",
+  "next_action": "NONE",
+  "physical_action": "YES",
+  "ready": true,
+  "status": "READY"
+}
+EXEC_RC=0
+
+=== POST CONTROLLERS ===
+forward_position_controller        position_controllers/JointGroupPositionController             inactive
+scaled_joint_trajectory_controller ur_controllers/ScaledJointTrajectoryController                inactive
+passthrough_trajectory_controller  ur_controllers/PassthroughTrajectoryController                inactive
+force_mode_controller              ur_controllers/ForceModeController                            inactive
+freedrive_mode_controller          ur_controllers/FreedriveModeController                        inactive
+
+=== POST PROGRAM ===
+response:
+ur_dashboard_msgs.srv.IsProgramRunning_Response(answer='Program running: true', program_running=True, success=True)
+
+=== FINAL READY ===
+{
+  "code": "PA-000",
+  "first_blocker": "NONE",
+  "mode": "CHECK_ONLY",
+  "next_action": "NONE",
+  "physical_action": "NO",
+  "ready": true,
+  "status": "READY"
+}
+FINAL_RC=0
+RESULT=REAL_STALE_FORCE_PASSTHROUGH_AUTO_CLEANUP_PASS
+
+Source: user-supplied terminal output from the 2026-08-31 real UR3 validation session. Repetitive ros2 CLI wait-for-service informational lines and unrelated controller rows were omitted; all state/result lines used for the gate decision are preserved.
