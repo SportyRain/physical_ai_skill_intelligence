@@ -1,0 +1,36 @@
+name: m8-consumer-contract-review-temp
+
+on:
+  push:
+    branches:
+      - m8-consumer-runtime-contract-propagation
+
+jobs:
+  software-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install test dependency
+        run: python -m pip install --disable-pip-version-check pytest
+      - name: Compile modified consumer source
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m py_compile src/physical_ai_skill_intelligence/provider_contract.py
+          python -m py_compile src/physical_ai_skill_intelligence/provider_observation.py
+          python -m py_compile src/physical_ai_skill_intelligence/adapters/real_ur3_free_space.py
+          python -m py_compile src/physical_ai_skill_intelligence/m8_trial002.py
+      - name: Run focused compatibility and propagation tests
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m pytest -q \
+            tests/test_runtime_provider_contract.py \
+            tests/test_real_ur3_free_space_adapter.py \
+            tests/test_m8_trial002.py \
+            tests/test_m8_consumer_runtime_contract.py \
+            tests/test_m8_consumer_trial002_forwarding.py
