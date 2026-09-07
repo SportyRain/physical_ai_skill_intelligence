@@ -197,6 +197,9 @@ class Ur3VisualServoingEvidenceImporter:
             "relative_goal_displacement_m": relative_goal,
             "goal_tolerance_m": tolerance,
             "provider_experience_context": context_raw,
+            "object_identity": UNKNOWN,
+            "target_identity": UNKNOWN,
+            "scene_identity": UNKNOWN,
         }
         related = (SourceArtifact(readback_rel, _sha256(readback_raw)),)
         strategies = ("nominal_baseline", "experience_adapted")
@@ -217,6 +220,8 @@ class Ur3VisualServoingEvidenceImporter:
             if not isinstance(first_action, (int, float)) or first_action <= 0:
                 raise EvidenceImportError(f"invalid Push trial{idx}_first_action_m")
 
+            # Explicit, inspectable derivation from two raw manifest metrics.
+            # This is intentionally recorded in physical_outcome; it is not a silent guess.
             task_success = float(final_error) <= float(tolerance)
             effective_action = (
                 metrics.get("nominal_baseline_push_distance_m", UNKNOWN)
@@ -244,7 +249,7 @@ class Ur3VisualServoingEvidenceImporter:
                     manifest=manifest,
                     manifest_raw=manifest_raw,
                     manifest_rel=manifest_rel,
-                    source_record_id=trial_id,
+                    source_record_id=experiment_id,
                     related=related,
                 ),
                 experience_id=experience_id,
@@ -264,6 +269,9 @@ class Ur3VisualServoingEvidenceImporter:
                 scene_context={
                     "provider_experience_context": context_raw,
                     "physical_action": manifest.get("physical_action", UNKNOWN),
+                    "source_record_commit": manifest.get("commit", UNKNOWN),
+                    "source_record_branch": manifest.get("branch", UNKNOWN),
+                    "source_record_gate": manifest.get("gate", UNKNOWN),
                     "raw_evidence_refs": tuple(str(x) for x in raw_evidence),
                 },
                 strategy_name=strategies[idx - 1],
@@ -333,6 +341,9 @@ class Ur3VisualServoingEvidenceImporter:
             "target_hue": metrics.get("target_hue", UNKNOWN),
             "place_xyz_m": place_xyz,
             "physical_action": manifest.get("physical_action", UNKNOWN),
+            "object_identity": UNKNOWN,
+            "target_identity": UNKNOWN,
+            "scene_identity": UNKNOWN,
         }
         record = ExperienceRecord(
             goal_predicate="PICK_AND_PLACE",
@@ -364,7 +375,13 @@ class Ur3VisualServoingEvidenceImporter:
             state_after={"object_pose": UNKNOWN},
             object_identity=UNKNOWN,
             target_identity=UNKNOWN,
-            scene_context={"target_hue": metrics.get("target_hue", UNKNOWN)},
+            scene_context={
+                "target_hue": metrics.get("target_hue", UNKNOWN),
+                "source_record_commit": manifest.get("commit", UNKNOWN),
+                "source_record_branch": manifest.get("branch", UNKNOWN),
+                "source_record_gate": manifest.get("gate", UNKNOWN),
+                "raw_evidence_refs": tuple(str(x) for x in manifest.get("raw_evidence", ())),
+            },
             strategy_name="real_pick_place_runtime",
             planned_action={"place_xyz_m": place_xyz},
             accepted_action={"pick_attachment_state": metrics.get("pick_attachment_state", UNKNOWN)},
