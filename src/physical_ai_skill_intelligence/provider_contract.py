@@ -56,6 +56,8 @@ class ProviderRuntimeContract:
     """
     configured_wall_clock_limit_s: float | None = None
     configured_timeout_s: float | None = None
+    configured_operation_timeout_s: float | None = None
+    configured_cleanup_timeout_s: float | None = None
     timeout_api: str = "UNKNOWN"
     timeout_scope: str = "UNKNOWN"
     cancel_api: str = "UNKNOWN"
@@ -65,12 +67,60 @@ class ProviderRuntimeContract:
     provider_cancel: str = field(default="NOT_VERIFIED", init=False)
 
     def __post_init__(self):
-        for name in ("configured_wall_clock_limit_s", "configured_timeout_s"):
+        for name in (
+            "configured_wall_clock_limit_s",
+            "configured_timeout_s",
+            "configured_operation_timeout_s",
+            "configured_cleanup_timeout_s",
+        ):
             if getattr(self, name) is not None:
                 finite_number(getattr(self, name), name, positive=True)
         for name in ("timeout_api", "timeout_scope", "cancel_api", "cancel_completion_semantics"):
             if not isinstance(getattr(self, name), str) or not getattr(self, name).strip():
                 raise ValueError(f"{name} must be explicit or UNKNOWN")
+
+
+@dataclass(frozen=True)
+class ProviderRuntimeResult:
+    """Normalized software runtime evidence, distinct from physical stop evidence.
+
+    None means the provider did not report that field (legacy compatibility).
+    cancel_requested, cancel_acknowledged, cleanup_completed, and physical stop
+    are intentionally separate facts. Software evidence can never initialize
+    physical_stop_verified to anything other than NOT_VERIFIED.
+    """
+    termination_reason: str = "UNKNOWN"
+    timed_out: bool | None = None
+    cancel_requested: bool | None = None
+    cancel_acknowledged: bool | None = None
+    cleanup_completed: bool | None = None
+    operation_elapsed_s: float | None = None
+    cleanup_elapsed_s: float | None = None
+    wall_clock_elapsed_s: float | None = None
+    physical_stop_verified: str = field(default="NOT_VERIFIED", init=False)
+
+    def __post_init__(self):
+        if not isinstance(self.termination_reason, str) or not self.termination_reason.strip():
+            raise ValueError("termination_reason must be explicit or UNKNOWN")
+        for name in (
+            "timed_out",
+            "cancel_requested",
+            "cancel_acknowledged",
+            "cleanup_completed",
+        ):
+            value = getattr(self, name)
+            if value is not None and type(value) is not bool:
+                raise ValueError(f"{name} must be bool or None")
+        for name in (
+            "operation_elapsed_s",
+            "cleanup_elapsed_s",
+            "wall_clock_elapsed_s",
+        ):
+            value = getattr(self, name)
+            if value is not None:
+                finite_number(value, name)
+        if self.cancel_acknowledged is True and self.cancel_requested is not True:
+            raise ValueError("cancel acknowledgement requires cancel_requested")
 
 
 @dataclass(frozen=True)
@@ -90,6 +140,7 @@ class ProviderResult:
     failure_semantics_reference: str = "UNKNOWN"
     cost: ProviderCost = field(default_factory=ProviderCost)
     runtime_contract: ProviderRuntimeContract = field(default_factory=ProviderRuntimeContract)
+    runtime_result: ProviderRuntimeResult = field(default_factory=ProviderRuntimeResult)
 
     def __post_init__(self) -> None:
         object.__setattr__(self, "observations", snapshot_mapping(self.observations))
@@ -113,12 +164,16 @@ class ProviderResult:
             raise ValueError("explicit ProviderCost required")
         if not isinstance(self.runtime_contract, ProviderRuntimeContract):
             raise ValueError("explicit ProviderRuntimeContract required")
+        if not isinstance(self.runtime_result, ProviderRuntimeResult):
+            raise ValueError("explicit ProviderRuntimeResult required")
         if self.provenance is not None:
             self.provenance.validate()
+
 
 class SkillProvider(Protocol):
     def execute(self, skill_name: str, goal: Goal, state: WorldState) -> ProviderResult:
         ...
+
 
 # This file defines only the boundary.
 # Robot motion/perception implementations must remain in external providers.
