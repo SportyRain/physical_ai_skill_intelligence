@@ -45,8 +45,9 @@ offline decision -> failure -> recovery -> state re-evaluation loop.
 
 ```text
 SportyRain/physical_ai_skill_intelligence
-branch: main
-status: VERIFIED
+M7 branch: m7-provider-adapter-integration
+M7 base: e43889173e00a5c73cf1b31d729609d6eb9ede18
+status: M7_SOFTWARE_PROVIDER_ADAPTER_COMPLETE_PENDING_REVIEW
 ```
 
 ## Implemented software boundary
@@ -208,68 +209,28 @@ These evidence statuses describe the preserved M5 stale-controller cleanup
 transcript. M6.1 performs no robot execution. See
 [the M6.1 verification report](docs/MILESTONE_6_1_VERIFICATION.md).
 
+## M7 software provider boundary
+
+M7 connects `COMPUTE_ON_TOP_OF_PLACE_TARGET` through a thin optional adapter to
+one committed external `ur3_visual_servoing` callable. The provider owns placement
+geometry. Its computed target returns through the existing `ProviderResult` and
+offline bounded harness without becoming a physical state update or goal success.
+No robot or recovery provider execution is verified.
+
+See [M7 verification](docs/MILESTONE_7_VERIFICATION.md) for the explicit immutable
+input contract, provider source SHA, and external integration test command.
+
 ## Verification status
 
-```text
-CLEAN_BASELINE = 12 passed
-PRE_M4_CURRENT_MAIN = 22 passed
-PRE_M5_CURRENT_MAIN = 30 passed
-PRE_M6_CURRENT_MAIN = 36 passed
-PRE_M6_1_CURRENT_BRANCH = 45 passed
-CURRENT_TOTAL = 195 passed
-PYTHON_COMPILE = PASS
-
-MULTI_EXPERIENCE_MODEL = VERIFIED
-RAW_EVIDENCE_IMPORT = VERIFIED
-PROVENANCE_TRACEABILITY = VERIFIED
-EXPERIENCE_CONDITIONED_OUTCOME_ESTIMATION = VERIFIED
-EXPERIENCE_CONDITIONED_DECISION = VERIFIED
-OFFLINE_REGRESSION = VERIFIED
-
-MILESTONE_4_FAILURE_AWARE_RECOVERY_DECISION = VERIFIED
-RECOVERY_EXPERIENCE_MODEL = VERIFIED
-EXACT_FAILURE_CONTEXT_MATCHING = VERIFIED
-RECOVERY_OUTCOME_ESTIMATION_BASELINE = VERIFIED
-DETERMINISTIC_RECOVERY_RANKING = VERIFIED
-OFFLINE_RECOVERY_REGRESSION = VERIFIED
-
-MILESTONE_5_REAL_RECOVERY_EVIDENCE_INTEGRATION = VERIFIED
-REAL_RECOVERY_EVIDENCE_IMPORT = VERIFIED
-REAL_RECOVERY_PROVENANCE_TRACEABILITY = VERIFIED
-REAL_RECOVERY_EVIDENCE_INFLUENCES_ESTIMATE = VERIFIED
-REAL_RECOVERY_EVIDENCE_INFLUENCES_DECISION = VERIFIED
-OFFLINE_REAL_RECOVERY_EVIDENCE_REGRESSION = VERIFIED
-SELECTED_RECOVERY_CHANGED_IN_OFFLINE_REAL_EVIDENCE_BENCHMARK = YES
-
-MILESTONE_6_BOUNDED_DECISION_RECOVERY_LOOP = VERIFIED
-BOUNDED_DECISION_RECOVERY_LOOP = VERIFIED
-NORMAL_DECISION_TO_FAILURE_TRANSITION = VERIFIED
-FAILURE_TO_RECOVERY_DECISION = VERIFIED
-RECOVERY_TO_STATE_REEVALUATION = VERIFIED
-GOAL_REEVALUATION_AFTER_RECOVERY = VERIFIED
-MAX_STEP_BOUND = VERIFIED
-RECOVERY_ATTEMPT_BOUND = VERIFIED
-SAME_FAILURE_NON_PROGRESS_REGRESSION = VERIFIED
-GENERAL_FAILURE_CYCLE_PREVENTION = NOT_VERIFIED
-TOTAL_COST_BOUND = VERIFIED
-TERMINAL_ABORT = VERIFIED
-DETERMINISTIC_BOUNDED_LOOP = VERIFIED
-OFFLINE_DECISION_RECOVERY_REGRESSION = VERIFIED
-
-REAL_RECOVERY_PROVIDER_ADAPTER = NOT_VERIFIED
-REAL_UR3_PROVIDER_ADAPTER = NOT_VERIFIED
-REAL_ROBOT_EXECUTION = NOT_VERIFIED
-RECOVERY_DECISION_IS_BETTER = NOT_VERIFIED
-REPEATABLE_PERFORMANCE_IMPROVEMENT = NOT_VERIFIED
-SELF_LEARNING = NOT_VERIFIED
-NOVEL_AI_ALGORITHM = NOT_VERIFIED
-```
-
-See `docs/MILESTONE_1_3_VERIFICATION.md`, `docs/MILESTONE_4_VERIFICATION.md`, `docs/MILESTONE_5_VERIFICATION.md`, and `docs/MILESTONE_6_VERIFICATION.md` for verification boundaries.
+Current claims are maintained in [VERIFICATION_REPORT.txt](VERIFICATION_REPORT.txt),
+with current test counts and reproducible commands in [TEST_RESULTS.txt](TEST_RESULTS.txt).
+The [verification index](docs/VERIFICATION_STATUS.md) distinguishes current status
+from historical milestone reports. External tests require the explicit provider
+repository setting; a skipped external suite does not verify integration.
 
 ## Run
 
 ```bash
-python -m pytest
-python -m compileall -q src tests
+python3 -m pytest
+python3 -m compileall -q src tests
 ```

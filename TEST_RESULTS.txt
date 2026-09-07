@@ -7,3 +7,17 @@ MILESTONE_6_TOTAL: 45 passed
 PRE_M6_1 = 45 passed
 M6_1_POST_HARDENING = 195 passed
 PYTHON_COMPILE = PASS
+
+PRE_M7_TESTS = 195 passed
+POST_M7_TESTS = 366 passed
+EXTERNAL_PROVIDER_TESTS = 11 passed
+OPTIONAL_PROVIDER_TEST_RUN = 355 passed, 11 skipped
+CURRENT_TOTAL_TESTS = 366 passed (external integration enabled)
+
+FULL_COMMAND = M7_PROVIDER_REPOSITORY=../ur3_visual_servoing python3 -m pytest -o addopts='' -q
+COMPILE_COMMAND = python3 -m compileall -q src tests
+EXTERNAL_COMMAND = M7_PROVIDER_REPOSITORY=../ur3_visual_servoing python3 -m pytest -o addopts='' -q -s tests/test_external_provider_integration.py
+OPTIONAL_COMMAND = python3 -m pytest -o addopts='' -q
+PROVIDER_COMMIT = dd12a75bbe55df65ce8112fe4fd6fdf2c903eb9f
+SCOPE = SOFTWARE_ONLY; SKIPPED_EXTERNAL_TESTS_DO_NOT_VERIFY_INTEGRATION
+CURRENT_CLAIM_LEDGER = VERIFICATION_REPORT.txt
