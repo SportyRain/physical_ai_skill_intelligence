@@ -23,6 +23,7 @@ def test_real_experience_conditioned_outcome_and_decision_are_deterministic():
     assert all(c.estimator_method == "empirical_beta_baseline" for c in after.candidates)
     assert a.estimate_changed is True
     assert a.evidence_count == 2
+    # Both real trials succeeded; lower attempt-count cost keeps nominal first.
     assert after.selected_skill == "goal_directed_continuous_push/nominal_baseline"
     nominal, adapted = after.candidates
     assert nominal.expected_success == adapted.expected_success == 2 / 3
@@ -30,4 +31,5 @@ def test_real_experience_conditioned_outcome_and_decision_are_deterministic():
     assert adapted.mean_cost == 3.0
     assert nominal.evidence_ids and adapted.evidence_ids
     assert nominal.provenance_trace and adapted.provenance_trace
+    # The selected strategy does not change; do not over-claim better decision.
     assert a.selection_changed is False

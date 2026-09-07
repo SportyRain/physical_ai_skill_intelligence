@@ -43,7 +43,7 @@ def test_import_real_pick_place_preserves_task_vs_action_success_distinction():
     assert row.success is True
     assert row.action_success is False
     assert row.failure_code == "PLACE_RESULT_UNKNOWN_TARGET_NOT_VISIBLE"
-    assert row.timestamp is None
+    assert row.timestamp is None  # source explicitly preserved null rather than guessing
     assert row.object_identity == UNKNOWN
 
 
@@ -59,7 +59,6 @@ def test_conflicting_duplicate_identity_is_rejected():
     rows = importer().import_run_manifest(PUSH_RUN, provider_root=ROOT)
     store = ExperienceStore(rows)
     bad = rows[0].__class__(**{**rows[0].__dict__, "cost": 99.0})
-    import pytest
     with pytest.raises(ValueError, match="conflicting duplicate"):
         store.add(bad)
 

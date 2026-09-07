@@ -1,23 +1,21 @@
 # Physical AI Skill Intelligence
 
-Clean-room base for **physical decision intelligence**.
+Clean-room software core for **Physical Decision Intelligence**.
 
-This project does **not** implement robot motion, visual servoing, planning, IK/FK,
-trajectory execution, camera drivers, or robot-specific manipulation.
+This project does not implement robot motion, visual servoing, planning, IK/FK, trajectory execution, camera drivers, or robot-specific manipulation. Existing robot repositories remain stable skill/evidence providers.
 
 ## Core question
 
-> Given a Goal, Current World State, Candidate Skills, and Past Physical Experience,
-> which skill/strategy should be selected next, and why?
+> Given a Goal, Current World State, Candidate Physical Skills / Strategies, and Past Physical Experience, which candidate should be selected next, and why?
 
 ```text
 Goal
 +
-World State
+Current World State
 +
-Candidate Skills
+Candidate Skills / Strategies
 +
-Past Experience
+Past Physical Experience
         |
         v
 Outcome Estimation
@@ -27,19 +25,28 @@ Decision / Ranking
         |
         v
 Existing Skill Provider
-        |
-        v
-Observed Outcome
-        |
-        v
-New Experience
 ```
 
-## Existing robot repositories
+## Implemented software boundary
 
-Existing UR3 projects are treated as **STABLE SKILL PROVIDERS**.
-They may evolve independently when necessary, but this repository does not copy their
-control/perception implementations.
+- semantically explicit multi-experience representation
+- exact-context matching with fail-closed `UNKNOWN` behavior
+- source provenance and SHA-256 traceability
+- deterministic read-only import of tracked UR3 evidence
+- real Push and Pick / Place evidence families
+- inspectable empirical outcome baseline
+- deterministic experience-conditioned candidate evaluation
+- evidence IDs and provenance trace in decision output
+- offline negative and regression tests
+
+## Stable provider investigated
+
+```text
+SportyRain/ur3_visual_servoing
+inspection commit: b91d3be5a7643f6e91023da8c9d7f339811c7b14
+```
+
+The repository does not copy its controller, perception, ROS, MoveIt, or robot execution implementation.
 
 ## DO_NOT_REIMPLEMENT
 
@@ -47,36 +54,60 @@ control/perception implementations.
 - ros2_control
 - MoveIt 2 / MoveIt Servo
 - IK / FK / Jacobian
-- trajectory execution
+- trajectory generation / execution
+- collision checking
 - camera drivers
 - robot-specific visual servoing
 - robot-specific pick/place implementation
 - robot-specific peg-in-hole controllers
+- generic ROS orchestration frameworks
 
-## OUR_CUSTOM_VALUE
+## Current real-evidence benchmark
 
-- Goal representation
-- World-state representation
-- Skill capability contracts
-- Experience/provenance representation
-- Outcome estimation interface
-- Experience-conditioned ranking
-- Explainable decision output
-- Offline evaluation/regression boundary
+Candidates:
 
-## Verification scope of v0.1.0
+```text
+goal_directed_continuous_push/nominal_baseline
+goal_directed_continuous_push/experience_adapted
+```
 
-This base verifies only software-level behavior.
+Without relevant experience, both use the explicit Beta(1,1) prior (`P(success)=0.5`).
 
-It does **not** claim:
-- real UR3 integration
-- repeatable performance improvement
-- self-learning
-- a novel learning algorithm
+With the imported real Push evidence:
 
-Run:
+```text
+nominal_baseline:     P(success)=2/3, evidence=1, mean attempts=2
+experience_adapted:  P(success)=2/3, evidence=1, mean attempts=3
+```
+
+The selected strategy remains `nominal_baseline`. Experience changes the estimates and decision evidence, but this dataset does **not** verify that the decision is better or that the adapted strategy improves performance.
+
+## Verification status
+
+```text
+CLEAN_BASELINE = 12 passed
+CURRENT_TOTAL = 22 passed
+PYTHON_COMPILE = PASS
+
+MULTI_EXPERIENCE_MODEL = VERIFIED
+RAW_EVIDENCE_IMPORT = VERIFIED
+PROVENANCE_TRACEABILITY = VERIFIED
+EXPERIENCE_CONDITIONED_OUTCOME_ESTIMATION = VERIFIED
+EXPERIENCE_CONDITIONED_DECISION = VERIFIED
+OFFLINE_REGRESSION = VERIFIED
+
+REAL_UR3_PROVIDER_ADAPTER = NOT_VERIFIED
+REAL_ROBOT_EXECUTION = NOT_VERIFIED
+REPEATABLE_PERFORMANCE_IMPROVEMENT = NOT_VERIFIED
+SELF_LEARNING = NOT_VERIFIED
+NOVEL_AI_ALGORITHM = NOT_VERIFIED
+```
+
+See `docs/MILESTONE_1_3_VERIFICATION.md` for the evidence source paths, SHA-256 values, benchmark details, and unresolved items.
+
+## Run
 
 ```bash
 python -m pytest
-python -m physical_ai_skill_intelligence.cli demo
+python -m compileall -q src tests
 ```
