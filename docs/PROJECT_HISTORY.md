@@ -572,3 +572,67 @@ NEXT = `M8_PRE_TRIAL002_SOFTWARE_EVIDENCE_GATE`: verify a JSON-safe structured
 evidence serializer software-only so Trial002 cannot lose the provider result as
 Trial001 did. Only after that software gate and the separate Trial002 pre-motion
 gates may one controlled +Z 5 mm physical trial be considered.
+
+## 2026-09-08 — M8 structured evidence serializer gate closed
+
+DATE = 2026-09-08
+
+MILESTONE / DECISION = M8 pre-Trial002 structured evidence serializer boundary
+VERIFIED and CLOSED; M8 remains ACTIVE and advances to the Trial002 pre-motion
+gate.
+
+WHAT_CHANGED = Physical AI PR #4 added a narrow JSON-safe evidence serializer for
+immutable ProviderResult records. The helper traverses dataclass fields and
+mapping/list/tuple/scalar values without `dataclasses.asdict()` deepcopy, preserving
+immutable runtime objects while producing plain JSON data. No robot control,
+adapter behavior, recovery logic, ROS behavior, or physical action was changed.
+
+WHY = Trial001 returned from the provider but lost its structured result because
+the wrapper called `dataclasses.asdict()` on a ProviderResult containing immutable
+`mappingproxy` mappings, causing `TypeError: cannot pickle 'mappingproxy' object`.
+Trial002 must not repeat a physical experiment while its structured evidence can
+still be lost after the provider returns.
+
+EVIDENCE =
+- Serializer test head: `01e4d77fd095a9de11c2641a98e79b6556fcea33`
+- PR #4 merged main: `2e542100987ab7772f6e36c136aa99243ae5f7fa`
+- Software evidence log:
+  `/home/rosystem/ur_projects/physical_ai_evidence/M8_REAL_UR3_20260908/M8_STRUCTURED_EVIDENCE_SERIALIZER_20260908_022328.log`
+- Evidence SHA256:
+  `4d888440df99920025f09ef3e38fbffef4def8053d83844150ccbf3412e753cc`
+- Exact source head gate: PASS
+- Diff check: PASS; exactly serializer source + serializer tests
+- Compile: PASS
+- Focused serializer + M8 adapter regression: 10 passed
+- Trial001 old failure reproduction: `TypeError: cannot pickle 'mappingproxy' object`
+- Old failure reproduction: PASS
+- New JSON serialization: PASS
+- Direct serialization RC: 0
+- Default regression RC: 0
+- Physical action: NO; ROS action: NO; robot motion command: NO
+
+REVIEW_DECISION =
+`STRUCTURED_EVIDENCE_SERIALIZER = VERIFIED`.
+`STRUCTURED_EVIDENCE_SERIALIZER_STATUS = CLOSED`.
+This closes the serializer implementation/serialization boundary only. It does not
+prove that an eventual Trial002 execution wrapper is wired to call the helper.
+
+UNRESOLVED =
+`TRIAL002_EVIDENCE_PATH_WIRING = NOT_VERIFIED`.
+`REAL_UR3_+Z_5MM_SUCCESS = NOT_VERIFIED`.
+`REAL_UR3_PROVIDER_ADAPTER = NOT_VERIFIED`.
+`REAL_ROBOT_EXECUTION = NOT_VERIFIED`.
+`PROVIDER_TIMEOUT = NOT_VERIFIED`.
+`PROVIDER_CANCEL = NOT_VERIFIED`.
+`PHYSICAL_STOP_AFTER_CANCEL = NOT_VERIFIED`.
+`WALL_CLOCK_BOUND = NOT_VERIFIED`.
+`BOUNDED_REAL_RUNTIME_TERMINATION = NOT_VERIFIED`.
+M8 as a whole remains ACTIVE and is not closed.
+
+NEXT = `TRIAL002_PRE_MOTION_MACHINE_SOURCE_AND_EVIDENCE_PATH_GATE`: pin exact
+Physical AI/provider source identity, prove the Trial002 structured result path
+uses the verified JSON-safe serializer, and perform a fresh CHECK_ONLY machine
+readiness observation immediately before any motion authorization. This is not a
+reopening of the already CLOSED headless runtime recovery gate. A second +Z 5 mm
+physical action remains blocked until those gates and renewed physical safety
+confirmation pass.
