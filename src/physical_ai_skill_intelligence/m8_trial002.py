@@ -8,6 +8,7 @@ explicitly by the caller after the separate pre-motion gates.
 """
 from __future__ import annotations
 
+from collections.abc import Mapping
 import json
 import os
 from pathlib import Path
@@ -26,13 +27,19 @@ from .adapters.real_ur3_free_space import (
 )
 from .evidence_serialization import to_jsonable
 from .goal import Goal
-from .provenance import Provenance, validate_commit
+from .provenance import Provenance, SourceArtifact, validate_commit
 from .state import WorldState
 
 
 TRIAL_SCHEMA_VERSION = "M8_REAL_UR3_TRIAL_V1"
 RUNNER_VERSION = "M8_TRIAL002_RUNNER_V1"
 REQUESTED_TRANSLATION_M = 0.005
+REQUIRED_RELATED_SOURCE_PATHS = (
+    "src/ur3_visual_servoing/__init__.py",
+    "src/ur3_visual_servoing/se3.py",
+    "src/ur3_visual_servoing/runtime/__init__.py",
+    "src/ur3_visual_servoing/robot_camera_collect.py",
+)
 
 
 def _nonempty(value: Any, name: str) -> str:
@@ -51,15 +58,31 @@ def _sha256(value: Any, name: str) -> str:
     return value.lower()
 
 
+def _related_source_hashes(value: Any) -> dict[str, str]:
+    if not isinstance(value, Mapping):
+        raise ValueError("provider_related_sources_sha256 must be a mapping")
+    if set(value) != set(REQUIRED_RELATED_SOURCE_PATHS):
+        raise ValueError(
+            "provider_related_sources_sha256 must identify exactly the required "
+            "loaded provider sources"
+        )
+    return {
+        path: _sha256(value[path], f"provider related source {path}")
+        for path in REQUIRED_RELATED_SOURCE_PATHS
+    }
+
+
 def build_m8_provider_provenance(
     *,
     provider_commit: str,
     provider_raw_sha256: str,
+    provider_related_sources_sha256: Mapping[str, str],
 ) -> Provenance:
-    """Build the exact provenance expected by the existing M8 adapter."""
+    """Build complete provenance for the exact loaded M8 provider source set."""
 
     validate_commit(provider_commit, "provider_commit", allow_unknown=False)
     raw_sha256 = _sha256(provider_raw_sha256, "provider_raw_sha256")
+    related = _related_source_hashes(provider_related_sources_sha256)
     return Provenance(
         source_repository=PROVIDER_REPOSITORY,
         source_commit=provider_commit,
@@ -68,6 +91,10 @@ def build_m8_provider_provenance(
         raw_sha256=raw_sha256,
         schema_version=TRIAL_SCHEMA_VERSION,
         importer_version=RUNNER_VERSION,
+        related_sources=tuple(
+            SourceArtifact(path, related[path])
+            for path in REQUIRED_RELATED_SOURCE_PATHS
+        ),
         artifact_snapshot_commit=provider_commit,
         experiment_runtime_commit=provider_commit,
     )
@@ -80,6 +107,7 @@ def run_trial002_positive_axis_5mm(
     physical_ai_commit: str,
     provider_commit: str,
     provider_raw_sha256: str,
+    provider_related_sources_sha256: Mapping[str, str],
     provider_repository: str,
     output_path: str | Path,
     execute_real: bool = False,
@@ -99,7 +127,10 @@ def run_trial002_positive_axis_5mm(
     if type(execute_real) is not bool:
         raise ValueError("execute_real must be boolean")
     validate_commit(physical_ai_commit, "physical_ai_commit", allow_unknown=False)
+    validate_commit(provider_commit, "provider_commit", allow_unknown=False)
     provider_repository = _nonempty(provider_repository, "provider_repository")
+    provider_raw_sha256 = _sha256(provider_raw_sha256, "provider_raw_sha256")
+    related_sources = _related_source_hashes(provider_related_sources_sha256)
 
     path = Path(output_path)
     if path.exists():
@@ -112,6 +143,7 @@ def run_trial002_positive_axis_5mm(
     provenance = build_m8_provider_provenance(
         provider_commit=provider_commit,
         provider_raw_sha256=provider_raw_sha256,
+        provider_related_sources_sha256=related_sources,
     )
     provider = RealUr3PositiveAxis5mmProvider(
         provenance,
@@ -137,10 +169,8 @@ def run_trial002_positive_axis_5mm(
         "trial_id": trial_id,
         "physical_ai_commit": physical_ai_commit,
         "provider_commit": provider_commit,
-        "provider_raw_sha256": _sha256(
-            provider_raw_sha256,
-            "provider_raw_sha256",
-        ),
+        "provider_raw_sha256": provider_raw_sha256,
+        "provider_related_sources_sha256": related_sources,
         "provider_repository": provider_repository,
         "axis": axis,
         "requested_translation_m": REQUESTED_TRANSLATION_M,
