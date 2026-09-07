@@ -1,11 +1,27 @@
 # Milestone 7 — software provider adapter verification
 
-Status: `M7_SOFTWARE_PROVIDER_ADAPTER_COMPLETE_PENDING_REVIEW`.
+```text
+AUTHORITATIVE_BRANCH = main
+M7_REVIEW = PASS
+M7_STATUS = CLOSED
+STATUS = M7_FINALIZED_ON_MAIN
+```
+
 The canonical current claim ledger is [VERIFICATION_REPORT.txt](../VERIFICATION_REPORT.txt).
 [Test results](../TEST_RESULTS.txt) distinguish the full external-source run from
 an ordinary run where external tests are skipped. M1–M6 and M6.1 are closed at
 base `e43889173e00a5c73cf1b31d729609d6eb9ede18`, per this task's authority.
-Work remains on `m7-provider-adapter-integration`; no main merge is part of M7.
+Reviewer PASS and merge approval were supplied for
+`5d7581275c7af6ee9f9c0773bf04ea5e290083f2`. The clean `main` branch and live
+`origin/main` were both at the M7 base before the fast-forward; remote-main versus
+approved-branch divergence was 0 / 1. The approved commit was fast-forward merged
+and pushed to `main`. Finalization modifies documentation only.
+
+Post-merge validation: `python3 -m pytest -q` passed (355 tests, with 11 optional
+external tests skipped); the full run with `M7_PROVIDER_REPOSITORY` passed all
+366 tests, and the separate pinned-source integration passed 11 tests.
+`python3 -m compileall -q src tests` exited 0. Source and tests remain identical
+to the approved commit. See the canonical test results for exact commands.
 
 ## Authoritative source and scope
 
@@ -180,4 +196,23 @@ adapter, robot execution, timeouts, cancellation, and wall-clock bounds remain
 NOT_VERIFIED. Decision/recovery superiority, repeatable improvement, self-learning,
 and novel AI algorithms remain NOT_VERIFIED. No ROS launch/action/service,
 controller switch, MoveIt/Servo/trajectory execution, camera hardware access,
-M8 work, or main merge is performed.
+M7.1 or M8 work is performed. Main publication is limited to the approved
+fast-forward and documentation finalization.
+
+The review closes only the M7 software integration scope. These boundaries are
+unchanged and explicitly retained in the canonical ledger:
+
+```text
+RUNTIME_PROVIDER_SOURCE_ATTESTATION = NOT_VERIFIED
+REAL_PROVIDER_FAILURE_RETRYABILITY = NOT_VERIFIED
+REAL_PROVIDER_COST = NOT_VERIFIED
+WALL_CLOCK_BOUND = NOT_VERIFIED
+PROVIDER_TIMEOUT = NOT_VERIFIED
+PROVIDER_CANCEL = NOT_VERIFIED
+REAL_UR3_PROVIDER_ADAPTER = NOT_VERIFIED
+REAL_ROBOT_EXECUTION = NOT_VERIFIED
+DECISION_IS_BETTER = NOT_VERIFIED
+REPEATABLE_PERFORMANCE_IMPROVEMENT = NOT_VERIFIED
+SELF_LEARNING = NOT_VERIFIED
+NOVEL_AI_ALGORITHM = NOT_VERIFIED
+```

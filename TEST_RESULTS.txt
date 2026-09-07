@@ -9,7 +9,7 @@ M6_1_POST_HARDENING = 195 passed
 PYTHON_COMPILE = PASS
 
 PRE_M7_TESTS = 195 passed
-POST_M7_TESTS = 366 passed
+POST_M7_TESTS = 366 passed (external integration enabled)
 EXTERNAL_PROVIDER_TESTS = 11 passed
 OPTIONAL_PROVIDER_TEST_RUN = 355 passed, 11 skipped
 CURRENT_TOTAL_TESTS = 366 passed (external integration enabled)
@@ -17,7 +17,17 @@ CURRENT_TOTAL_TESTS = 366 passed (external integration enabled)
 FULL_COMMAND = M7_PROVIDER_REPOSITORY=../ur3_visual_servoing python3 -m pytest -o addopts='' -q
 COMPILE_COMMAND = python3 -m compileall -q src tests
 EXTERNAL_COMMAND = M7_PROVIDER_REPOSITORY=../ur3_visual_servoing python3 -m pytest -o addopts='' -q -s tests/test_external_provider_integration.py
-OPTIONAL_COMMAND = python3 -m pytest -o addopts='' -q
+OPTIONAL_COMMAND = python3 -m pytest -q
 PROVIDER_COMMIT = dd12a75bbe55df65ce8112fe4fd6fdf2c903eb9f
 SCOPE = SOFTWARE_ONLY; SKIPPED_EXTERNAL_TESTS_DO_NOT_VERIFY_INTEGRATION
 CURRENT_CLAIM_LEDGER = VERIFICATION_REPORT.txt
+
+AUTHORITATIVE_BRANCH = main
+M7_REVIEW = PASS
+M7_STATUS = CLOSED
+M7_APPROVED_COMMIT = 5d7581275c7af6ee9f9c0773bf04ea5e290083f2
+POST_MERGE_MAIN_COMMIT = 5d7581275c7af6ee9f9c0773bf04ea5e290083f2
+POST_FINALIZATION_TESTS = 366 passed (external integration enabled)
+POST_FINALIZATION_DEFAULT_TESTS = 355 passed, 11 skipped
+FINALIZATION_SCOPE = DOCUMENTATION_ONLY; SOURCE_AND_TESTS_UNCHANGED_FROM_APPROVED_COMMIT
+STATUS = M7_FINALIZED_ON_MAIN

@@ -45,9 +45,10 @@ offline decision -> failure -> recovery -> state re-evaluation loop.
 
 ```text
 SportyRain/physical_ai_skill_intelligence
-M7 branch: m7-provider-adapter-integration
+AUTHORITATIVE_BRANCH = main
 M7 base: e43889173e00a5c73cf1b31d729609d6eb9ede18
-status: M7_SOFTWARE_PROVIDER_ADAPTER_COMPLETE_PENDING_REVIEW
+M7_REVIEW = PASS
+M7_STATUS = CLOSED
 ```
 
 ## Implemented software boundary
