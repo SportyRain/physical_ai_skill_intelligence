@@ -512,3 +512,63 @@ restore the verified headless External-Control runtime using the existing
 `runtime_state=PLAYING`, effective speed scaling is positive, and canonical
 `ur3-ready=PA-000`. Only after that machine gate and renewed physical safety
 confirmation may a second +Z 5 mm trial be considered.
+
+## 2026-09-08 — M8 headless runtime recovery gate closed
+
+DATE = 2026-09-08
+
+MILESTONE / DECISION = M8 headless runtime recovery boundary VERIFIED and CLOSED;
+M8 remains ACTIVE and advances to the pre-Trial002 software evidence gate.
+
+WHAT_CHANGED = No new recovery logic was introduced. With all canonical motion
+controllers inactive, the existing headless
+`/io_and_status_controller/resend_robot_program` service was called exactly once
+and returned success. Read-only RTDE verification then produced 5/5 consecutive
+samples with `runtime_state=PLAYING(2)`, raw `speed_scaling=1.0`,
+`target_speed_fraction=0.02`, combined scaling `0.02`, robot mode RUNNING and
+safety NORMAL. Canonical `ur3-ready --json` returned `PA-000 / READY`, and all
+motion controllers remained inactive. No Servo target, FPC activation, or +Z
+motion was issued during this gate.
+
+WHY = Trial001 had already established the PAUSED/zero-scaling failure mechanism,
+and the READY false-positive had already been fixed. The only remaining runtime
+boundary was to prove that the existing headless runtime could be restored to an
+execution-capable state without reopening or reimplementing recovery logic.
+
+EVIDENCE =
+- Recovery log:
+  `/home/rosystem/ur_projects/physical_ai_evidence/M8_REAL_UR3_20260908/M8_HEADLESS_RUNTIME_RECOVERY_20260908_020652.log`
+- Recovery log SHA256:
+  `d5349ea88c197536ece90d1084805580f8dad40206ab27c7cb017b3947f62ed1`
+- `RESEND_RC=0`
+- RTDE 5/5: `runtime_state=2 (PLAYING)`, `speed_scaling=1.0`,
+  `target_speed_fraction=0.02`, combined `0.02`, `robot_mode=7`, `safety_mode=1`
+- `RTDE_RUNTIME_GATE=PASS`
+- `POST_READY_CODE=PA-000`, `POST_READY_RC=0`
+- `POST_MOTION_CONTROLLER_GATE=PASS`
+- `HEADLESS_RUNTIME_RECOVERY_GATE=PASS`
+- Physical motion command during this gate: NO
+
+REVIEW_DECISION =
+`HEADLESS_RUNTIME_RECOVERY = VERIFIED`.
+`HEADLESS_RUNTIME_RECOVERY_STATUS = CLOSED`.
+`CANONICAL_READY_AFTER_RUNTIME_RECOVERY = VERIFIED`.
+The earlier `RESTORE_HEADLESS_RUNTIME_PLAYING_AND_POSITIVE_SPEED_SCALING` boundary
+is closed and must not be repeated absent contradictory new evidence.
+
+UNRESOLVED =
+`STRUCTURED_EVIDENCE_SERIALIZER = NOT_VERIFIED`.
+`REAL_UR3_+Z_5MM_SUCCESS = NOT_VERIFIED`.
+`REAL_UR3_PROVIDER_ADAPTER = NOT_VERIFIED`.
+`REAL_ROBOT_EXECUTION = NOT_VERIFIED`.
+`PROVIDER_TIMEOUT = NOT_VERIFIED`.
+`PROVIDER_CANCEL = NOT_VERIFIED`.
+`PHYSICAL_STOP_AFTER_CANCEL = NOT_VERIFIED`.
+`WALL_CLOCK_BOUND = NOT_VERIFIED`.
+`BOUNDED_REAL_RUNTIME_TERMINATION = NOT_VERIFIED`.
+M8 as a whole remains ACTIVE and is not closed.
+
+NEXT = `M8_PRE_TRIAL002_SOFTWARE_EVIDENCE_GATE`: verify a JSON-safe structured
+evidence serializer software-only so Trial002 cannot lose the provider result as
+Trial001 did. Only after that software gate and the separate Trial002 pre-motion
+gates may one controlled +Z 5 mm physical trial be considered.
