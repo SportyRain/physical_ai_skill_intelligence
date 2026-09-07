@@ -1,14 +1,18 @@
-"""Narrow repository-owned Trial002 execution and evidence path.
+"""Narrow repository-owned M8 execution and evidence path.
 
 This module does not add retry, recovery, orchestration, motion planning, or robot
 control. It invokes the existing M8 +5 mm adapter exactly once and persists its
 immutable ProviderResult through the verified JSON-safe evidence serializer.
 Physical execution remains fail-closed unless ``execute_real=True`` is supplied
 explicitly by the caller after the separate pre-motion gates.
+
+For the termination-contract continuation, the same runner forwards the
+provider's bounded operation/cleanup budgets and an optional cooperative cancel
+callback. It does not implement a second timer, cancellation thread, or stop path.
 """
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 import json
 import os
 from pathlib import Path
@@ -16,6 +20,10 @@ import time
 from typing import Any
 
 from .adapters.real_ur3_free_space import (
+    DEFAULT_CLEANUP_TIMEOUT_S,
+    DEFAULT_MOTION_TIMEOUT_S,
+    DEFAULT_OPERATION_TIMEOUT_S,
+    DEFAULT_SETTLE_ERROR_MM,
     GOAL_PREDICATE,
     GOAL_SUBJECT,
     PROVIDER_CALLABLE,
@@ -32,7 +40,7 @@ from .state import WorldState
 
 
 TRIAL_SCHEMA_VERSION = "M8_REAL_UR3_TRIAL_V1"
-RUNNER_VERSION = "M8_TRIAL002_RUNNER_V1"
+RUNNER_VERSION = "M8_TRIAL002_RUNNER_V2_CONSUMER_RUNTIME_CONTRACT"
 REQUESTED_TRANSLATION_M = 0.005
 REQUIRED_RELATED_SOURCE_PATHS = (
     "src/ur3_visual_servoing/__init__.py",
@@ -111,14 +119,19 @@ def run_trial002_positive_axis_5mm(
     provider_repository: str,
     output_path: str | Path,
     execute_real: bool = False,
-    motion_timeout_s: float = 12.0,
-    settle_error_mm: float = 1.0,
+    motion_timeout_s: float = DEFAULT_MOTION_TIMEOUT_S,
+    operation_timeout_s: float = DEFAULT_OPERATION_TIMEOUT_S,
+    cleanup_timeout_s: float = DEFAULT_CLEANUP_TIMEOUT_S,
+    settle_error_mm: float = DEFAULT_SETTLE_ERROR_MM,
+    cancel_requested: Callable[[], bool] | None = None,
 ) -> dict[str, Any]:
     """Invoke the existing adapter once and atomically persist structured evidence.
 
     The output path must not already exist. This check happens before constructing
     or invoking the provider so an existing immutable evidence record cannot cause
-    an accidental repeat execution.
+    an accidental repeat execution. ``cancel_requested`` is forwarded directly to
+    the adapter as a provider callback; the runner neither polls it nor adds
+    another cancellation mechanism.
     """
 
     trial_id = _nonempty(trial_id, "trial_id")
@@ -126,6 +139,8 @@ def run_trial002_positive_axis_5mm(
         raise ValueError("axis must be exactly X, Y, or Z")
     if type(execute_real) is not bool:
         raise ValueError("execute_real must be boolean")
+    if cancel_requested is not None and not callable(cancel_requested):
+        raise ValueError("cancel_requested must be callable or None")
     validate_commit(physical_ai_commit, "physical_ai_commit", allow_unknown=False)
     validate_commit(provider_commit, "provider_commit", allow_unknown=False)
     provider_repository = _nonempty(provider_repository, "provider_repository")
@@ -150,7 +165,10 @@ def run_trial002_positive_axis_5mm(
         provider_repository=provider_repository,
         execute_real=execute_real,
         motion_timeout_s=motion_timeout_s,
+        operation_timeout_s=operation_timeout_s,
+        cleanup_timeout_s=cleanup_timeout_s,
         settle_error_mm=settle_error_mm,
+        cancel_requested_callback=cancel_requested,
     )
     goal = Goal(
         predicate=GOAL_PREDICATE,
@@ -175,6 +193,10 @@ def run_trial002_positive_axis_5mm(
         "axis": axis,
         "requested_translation_m": REQUESTED_TRANSLATION_M,
         "execute_real": execute_real,
+        "configured_motion_timeout_s": motion_timeout_s,
+        "configured_operation_timeout_s": operation_timeout_s,
+        "configured_cleanup_timeout_s": cleanup_timeout_s,
+        "cancel_callback_supplied": cancel_requested is not None,
         "wrapper_elapsed_s": wrapper_elapsed_s,
         "serialization": "to_jsonable",
         "result": to_jsonable(result),
