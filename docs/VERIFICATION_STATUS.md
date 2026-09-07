@@ -13,10 +13,10 @@ M7.1 is CLOSED on authoritative `main`.
 
 Independent reviewer audit passed M7.1, including source commit
 `1a200c7df53d2d24c18eeb787a5336c80cec9c52`. This documentation-only follow-up
-finalized M7.1 after independent reviewer approval. M8 is now ACTIVE. The first
-controlled real-UR3 trial was performed, but physical execution success was not
-established. Its runtime failure boundary has since been recovered and closed;
-the current M8 boundary is the pre-Trial002 software evidence serializer gate.
+finalized M7.1 after independent reviewer approval. M8 is now ACTIVE. Trial001 did
+not establish physical +Z success. Its runtime failure/recovery boundary and the
+structured evidence serializer software boundary are both now CLOSED. The current
+M8 boundary is Trial002 pre-motion source/machine/evidence-path validation.
 
 ```text
 AUTHORITATIVE_BRANCH = main
@@ -52,7 +52,7 @@ M7_1_FINALIZATION_STATUS = M7_1_FINALIZED_ON_MAIN
 ```text
 M8_STARTED = YES
 M8_STATUS = ACTIVE
-M8_GATE = PRE_TRIAL002_SOFTWARE_EVIDENCE_GATE
+M8_GATE = TRIAL002_PRE_MOTION_MACHINE_SOURCE_AND_EVIDENCE_PATH_GATE
 
 PHYSICAL_AI_ADAPTER_MERGE = f9c111e84c83eeea3352767a958688c29d6eb58e
 PROVIDER_ACTION_MERGE = 8733c1f0a1172200d5a0b42a3fea4cd76bc4bcc2
@@ -75,7 +75,17 @@ POST_RECOVERY_CANONICAL_READY = PA-000 / READY
 POST_RECOVERY_MOTION_CONTROLLER_GATE = PASS
 POST_RECOVERY_EVIDENCE_SHA256 = d5349ea88c197536ece90d1084805580f8dad40206ab27c7cb017b3947f62ed1
 
-STRUCTURED_EVIDENCE_SERIALIZER = NOT_VERIFIED
+STRUCTURED_EVIDENCE_SERIALIZER = VERIFIED
+STRUCTURED_EVIDENCE_SERIALIZER_STATUS = CLOSED
+STRUCTURED_EVIDENCE_SERIALIZER_PR = 4
+STRUCTURED_EVIDENCE_SERIALIZER_MERGE = 2e542100987ab7772f6e36c136aa99243ae5f7fa
+STRUCTURED_EVIDENCE_SERIALIZER_TEST_HEAD = 01e4d77fd095a9de11c2641a98e79b6556fcea33
+STRUCTURED_EVIDENCE_SERIALIZER_EVIDENCE_SHA256 = 4d888440df99920025f09ef3e38fbffef4def8053d83844150ccbf3412e753cc
+STRUCTURED_EVIDENCE_SERIALIZER_FOCUSED_TEST = 10 passed
+STRUCTURED_EVIDENCE_SERIALIZER_DIRECT_REPRODUCTION = PASS
+STRUCTURED_EVIDENCE_SERIALIZER_DEFAULT_REGRESSION = PASS
+
+TRIAL002_EVIDENCE_PATH_WIRING = NOT_VERIFIED
 REAL_UR3_+Z_5MM_SUCCESS = NOT_VERIFIED
 REAL_UR3_PROVIDER_ADAPTER = NOT_VERIFIED
 REAL_ROBOT_EXECUTION = NOT_VERIFIED
@@ -86,8 +96,8 @@ WALL_CLOCK_BOUND = NOT_VERIFIED
 BOUNDED_REAL_RUNTIME_TERMINATION = NOT_VERIFIED
 
 SECOND_REAL_MOTION = BLOCKED
-NEXT_GATE = M8_PRE_TRIAL002_SOFTWARE_EVIDENCE_GATE
-STATUS = M8_ACTIVE_PRE_TRIAL002_SOFTWARE_EVIDENCE_GATE
+NEXT_GATE = TRIAL002_PRE_MOTION_MACHINE_SOURCE_AND_EVIDENCE_PATH_GATE
+STATUS = M8_ACTIVE_TRIAL002_PRE_MOTION_GATE
 ```
 
 The first physical call reached the provider and activated
@@ -97,7 +107,7 @@ established. Direct read-only RTDE samples then showed the robot runtime in
 incorrectly returned `PA-000`; provider PR #217 added a fresh effective
 speed-scaling gate and the rebuilt canonical install correctly blocked that state.
 
-That runtime boundary is now closed by later evidence. A single existing headless
+That runtime boundary is closed by later evidence. A single existing headless
 `resend_robot_program` recovery returned success, followed by 5/5 RTDE samples at
 `runtime_state=PLAYING(2)`, raw speed scaling `1.0`, target speed fraction `0.02`,
 combined scaling `0.02`, robot mode RUNNING and safety NORMAL. Canonical
@@ -105,11 +115,18 @@ combined scaling `0.02`, robot mode RUNNING and safety NORMAL. Canonical
 inactive. No Servo target, FPC activation, or second +Z motion occurred during
 that recovery gate.
 
-The next boundary is software-only evidence serialization. The Trial001 structured
-result was lost after the provider returned because the wrapper attempted a
-`dataclasses.asdict()` deepcopy across immutable `mappingproxy` fields. M8 must
-verify a JSON-safe serialization path before Trial002 so that another physical
-trial cannot lose its structured result.
+The Trial001 result-loss boundary is also closed at the serializer level. PR #4
+added a JSON-safe conversion path that does not use `dataclasses.asdict()` across
+immutable `mappingproxy` snapshots. Exact-head Ubuntu verification reproduced the
+old `TypeError: cannot pickle 'mappingproxy' object`, then serialized the same
+ProviderResult shape successfully, passed 10 focused serializer/adapter tests,
+compile, and the default regression suite. No ROS or physical action occurred.
+
+The serializer helper being VERIFIED does not by itself prove that a future
+Trial002 wrapper actually uses it. `TRIAL002_EVIDENCE_PATH_WIRING` therefore
+remains NOT_VERIFIED and is part of the current pre-motion gate together with
+caller-pinned source identity and a fresh machine readiness check. This does not
+reopen the already CLOSED headless runtime recovery capability.
 
 This status does not promote real provider-adapter success, real robot execution,
 provider timeout/cancel, completed physical stop, or wall-clock bounds. Those
