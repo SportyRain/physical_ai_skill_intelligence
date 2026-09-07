@@ -13,12 +13,14 @@ M7.1 is CLOSED on authoritative `main`.
 
 Independent reviewer audit passed M7.1, including source commit
 `1a200c7df53d2d24c18eeb787a5336c80cec9c52`. This documentation-only follow-up
-finalized M7.1 after independent reviewer approval. M8 is now ACTIVE. Trial001 did
-not establish physical +Z success. Its runtime failure/recovery boundary, the
-structured evidence serializer boundary, the Trial002 evidence-path wiring
-boundary, and the fresh Trial002 pre-motion machine/source boundary are now
-CLOSED. The current M8 boundary is explicit physical safety confirmation before
-one controlled +Z 5 mm Trial002.
+finalized M7.1 after independent reviewer approval. M8 remains ACTIVE. Trial001 did
+not establish physical +Z success, but its failure/recovery boundary, structured
+evidence serializer boundary, Trial002 evidence-path wiring boundary, and fresh
+pre-motion machine/source boundary are CLOSED. Trial002 subsequently established
+the real Physical AI adapter/provider/UR3 execution path and a settled +Z result
+within the configured 1 mm tolerance. M8 now advances to the remaining controlled
+runtime boundary: timeout, cancellation/completed stop, and end-to-end wall-clock
+bounding.
 
 ```text
 AUTHORITATIVE_BRANCH = main
@@ -54,7 +56,7 @@ M7_1_FINALIZATION_STATUS = M7_1_FINALIZED_ON_MAIN
 ```text
 M8_STARTED = YES
 M8_STATUS = ACTIVE
-M8_GATE = TRIAL002_PHYSICAL_SAFETY_CONFIRMATION_GATE
+M8_GATE = TIMEOUT_CANCEL_WALL_CLOCK_VALIDATION_GATE
 
 PHYSICAL_AI_ADAPTER_MERGE = f9c111e84c83eeea3352767a958688c29d6eb58e
 PROVIDER_ACTION_MERGE = 8733c1f0a1172200d5a0b42a3fea4cd76bc4bcc2
@@ -115,20 +117,48 @@ TRIAL002_PRE_MOTION_RTDE_RUNTIME_STATE = PLAYING(2), 5/5
 TRIAL002_PRE_MOTION_RTDE_SPEED_SCALING = 1.0, 5/5
 TRIAL002_PRE_MOTION_TARGET_SPEED_FRACTION = 0.02, 5/5
 TRIAL002_PRE_MOTION_COMBINED_SPEED_SCALING = 0.02, 5/5
-TRIAL002_PHYSICAL_SAFETY_CONFIRMATION = PENDING
+TRIAL002_PHYSICAL_SAFETY_CONFIRMATION = VERIFIED
 
-REAL_UR3_+Z_5MM_SUCCESS = NOT_VERIFIED
-REAL_UR3_PROVIDER_ADAPTER = NOT_VERIFIED
-REAL_ROBOT_EXECUTION = NOT_VERIFIED
+TRIAL002_PRECALL_BLOCKED_ID = M8_REAL_Z5MM_TRIAL002_20260908_032603
+TRIAL002_PRECALL_BLOCKED_FAILURE = RUNTIME_PROVIDER_IDENTITY_UNVERIFIED
+TRIAL002_PRECALL_BLOCKED_ROOT_CAUSE = PROVIDER_IMPORTED_FROM_CANONICAL_INSTALL_OUTSIDE_SOURCE_ATTESTATION_PATH_CONTRACT
+TRIAL002_PRECALL_BLOCKED_JSON_SHA256 = b6721febb0d00bced7056b69c2ed34a34fc099295f82079d8f04750687a3751c
+
+TRIAL002_ID = M8_REAL_Z5MM_TRIAL002_20260908_032842
+TRIAL002_RESULT = PASS
+TRIAL002_RUNTIME_PROVIDER_IDENTITY = VERIFIED
+TRIAL002_PROVIDER_CALL = VERIFIED
+TRIAL002_COMMAND_PUBLISHED = VERIFIED
+TRIAL002_COMMAND_ACCEPTANCE = NOT_VERIFIED
+TRIAL002_PROVIDER_COMPLETED = VERIFIED
+TRIAL002_SETTLED = VERIFIED
+TRIAL002_TIMED_OUT = FALSE_VERIFIED
+TRIAL002_INITIAL_TCP_BASE_M = [0.22595878378145123, -0.08115447707721629, 0.1453542557242874]
+TRIAL002_FINAL_TCP_BASE_M = [0.2259875848028193, -0.08115966526156596, 0.14941279618600023]
+TRIAL002_OBSERVED_Z_TRANSLATION_M = 0.004058540461712834
+TRIAL002_OBSERVED_TRANSLATION_NORM_M = 0.004058645968232375
+TRIAL002_FINAL_ERROR_MM = 0.9419142627227715
+TRIAL002_MOTION_ELAPSED_S = 4.559423718004837
+TRIAL002_WRAPPER_ELAPSED_S = 8.301585738998256
+TRIAL002_FINAL_FPC_INACTIVE = VERIFIED
+TRIAL002_SERVO_PAUSED = VERIFIED
+TRIAL002_STRUCTURED_JSON = VERIFIED
+TRIAL002_JSON_SHA256 = 53f447e0c2d91409532a17e2dbb4c89fc9a6677cdfb445f942f5135cb1e28500
+TRIAL002_OBSERVED_RUN_RETURNED = VERIFIED
+
+REAL_UR3_+Z_5MM_SUCCESS = VERIFIED
+REAL_UR3_+Z_5MM_SUCCESS_SCOPE = REQUESTED 5 mm; settled within 1 mm tolerance; observed +Z 4.058540 mm; final error 0.941914 mm
+REAL_UR3_PROVIDER_ADAPTER = VERIFIED
+REAL_ROBOT_EXECUTION = VERIFIED
 PROVIDER_TIMEOUT = NOT_VERIFIED
 PROVIDER_CANCEL = NOT_VERIFIED
 PHYSICAL_STOP_AFTER_CANCEL = NOT_VERIFIED
 WALL_CLOCK_BOUND = NOT_VERIFIED
 BOUNDED_REAL_RUNTIME_TERMINATION = NOT_VERIFIED
 
-SECOND_REAL_MOTION = BLOCKED
-NEXT_GATE = TRIAL002_PHYSICAL_SAFETY_CONFIRMATION
-STATUS = M8_ACTIVE_TRIAL002_PHYSICAL_SAFETY_CONFIRMATION_GATE
+SECOND_REAL_MOTION = COMPLETED
+NEXT_GATE = M8_TIMEOUT_CANCEL_WALL_CLOCK_VALIDATION
+STATUS = M8_ACTIVE_TIMEOUT_CANCEL_WALL_CLOCK_VALIDATION_GATE
 ```
 
 The first physical call reached the provider and activated
@@ -153,7 +183,7 @@ old `TypeError: cannot pickle 'mappingproxy' object`, then serialized the same
 ProviderResult shape successfully, passed 10 focused serializer/adapter tests,
 compile, and the default regression suite. No ROS or physical action occurred.
 
-The Trial002 evidence path is now also verified. The first dry run failed closed
+The Trial002 evidence path is also verified. The first dry run failed closed
 before physical action with `RUNTIME_PROVIDER_IDENTITY_UNVERIFIED` because the
 runner provenance omitted provider-owned Python modules that were loaded as
 related sources. The runner was corrected to require the exact loaded source set:
@@ -165,21 +195,52 @@ returned `BLOCKED_EXECUTION_REQUIRED` with no command publication, and atomicall
 wrote the structured JSON through `to_jsonable()`. No ROS mutation or physical
 motion occurred.
 
-The fresh Trial002 pre-motion source/machine gate is also now closed. Physical AI
-main `28b6e3da0a66c88ca385aa1ab3a725aa28205de3` and provider main
-`ce04cce26e486e5bd3c2dd77f85b91b4bf8d17f5` matched the expected authoritative
-heads. Execution source was unchanged from the already-verified runner/provider
-boundaries, canonical installed READY/action source matched the pinned provider,
-canonical `ur3-ready` returned `PA-000`, all motion controllers were inactive, and
-5/5 direct RTDE samples showed PLAYING(2), raw scaling 1.0, target fraction 0.02,
-combined scaling 0.02, robot mode RUNNING, and safety NORMAL. This gate performed
-no ROS runtime mutation, Servo target, FPC activation, or physical motion.
+The fresh Trial002 pre-motion source/machine gate is closed. Physical AI main
+`28b6e3da0a66c88ca385aa1ab3a725aa28205de3` and provider main
+`ce04cce26e486e5bd3c2dd77f85b91b4bf8d17f5` matched the expected heads at that
+gate. Later synchronization advanced Physical AI to `c28bc3e5b9d832c46718cf70cc5aa3ffa2057dd6`;
+the intervening Physical AI changes were record-only and did not change execution
+source. A fresh recheck at the synchronized heads reconfirmed clean execution
+source, matching installed provider bytes, canonical `PA-000 / READY`, positive ROS
+effective scaling, and inactive motion controllers. The attempted direct RTDE
+recheck was incomplete only because the then-selected Python environment lacked
+`rtde_receive`; no contradictory robot-state evidence was observed.
 
-This closes only the Trial002 pre-motion source/machine readiness boundary. It does
-not establish real +Z success, real provider-adapter success, real robot execution,
-provider timeout/cancel, completed physical stop, or wall-clock bounds. Those
-claims remain NOT_VERIFIED. The next gate is explicit physical safety confirmation
-for one +Z 5 mm Trial002. The motion remains blocked until that confirmation.
+Two pre-call execution attempts were blocked before robot motion by shell/runtime
+identity setup mistakes. One stopped while sourcing ROS setup under shell
+`nounset`; the later structured blocked attempt
+`M8_REAL_Z5MM_TRIAL002_20260908_032603` failed closed with
+`RUNTIME_PROVIDER_IDENTITY_UNVERIFIED` because the provider was imported from the
+canonical install path while the attestation contract requires the Git source-tree
+path. Its JSON was preserved with SHA256
+`b6721febb0d00bced7056b69c2ed34a34fc099295f82079d8f04750687a3751c`;
+FPC remained inactive and no provider action or physical motion occurred.
+
+The successful Trial002 was `M8_REAL_Z5MM_TRIAL002_20260908_032842`. Runtime
+provider identity was VERIFIED against
+`SportyRain/ur3_visual_servoing@ce04cce26e486e5bd3c2dd77f85b91b4bf8d17f5`.
+The provider published the +Z command, completed, settled without timeout, and
+returned PASS. Initial TCP was
+`[0.22595878378145123, -0.08115447707721629, 0.1453542557242874]` m; final TCP was
+`[0.2259875848028193, -0.08115966526156596, 0.14941279618600023]` m. Observed +Z
+translation was `0.004058540461712834` m, with final target error
+`0.9419142627227715` mm, satisfying the configured 1 mm settle tolerance. Motion
+elapsed time was `4.559423718004837` s and wrapper elapsed time was
+`8.301585738998256` s. Final FPC state was inactive, Servo was paused, and the
+structured JSON was saved with SHA256
+`53f447e0c2d91409532a17e2dbb4c89fc9a6677cdfb445f942f5135cb1e28500`.
+
+This establishes `REAL_UR3_+Z_5MM_SUCCESS`, `REAL_UR3_PROVIDER_ADAPTER`, and
+`REAL_ROBOT_EXECUTION` within this narrow Trial002 scope. `command_acceptance`
+remains `NOT_VERIFIED`; command publication and observed physical motion do not
+invent a separate acknowledgement claim.
+
+M8 is not closed by this successful normal run. The runtime contract reports a
+12 s timeout only for the motion settle loop, while startup and cleanup are
+excluded and the configured wall-clock limit is null. This run did not exercise
+the timeout path or any cancellation API. Therefore `PROVIDER_TIMEOUT`,
+`PROVIDER_CANCEL`, `PHYSICAL_STOP_AFTER_CANCEL`, `WALL_CLOCK_BOUND`, and
+`BOUNDED_REAL_RUNTIME_TERMINATION` remain `NOT_VERIFIED`.
 
 See [M7.1 verification](MILESTONE_7_1_VERIFICATION.md) for the implementation
 boundary, committed provider audit, adversarial coverage, and fresh rerun results:
@@ -196,9 +257,9 @@ remains an offline evaluation harness.
 
 The existing M5 runtime recovery evidence remains historical preserved evidence.
 Real recovery adapter/execution, decision superiority, repeatable performance
-improvement, self-learning, and novel AI algorithm claims remain NOT_VERIFIED.
-The M7.1 documentation follow-up itself performed no robot execution. Subsequent
-M8 work is tracked separately above; M8 as a whole remains ACTIVE and not closed.
+improvement, self-learning, and novel algorithm claims remain NOT_VERIFIED.
+M8 remains ACTIVE only for the controlled timeout/cancel/wall-clock boundary; no
+additional normal-motion proof is required.
 
 Historical milestone reports describe their own source snapshots, test counts,
 and review states; they do not override this current ledger/status.
