@@ -62,8 +62,8 @@ status: VERIFIED
 - failure-aware recovery experience representation
 - exact failure-code / attribution / context matching
 - deterministic recovery outcome estimation and ranking
-- read-only import of tracked real recovery evidence
-- real recovery provenance trace through outcome estimate and recovery decision
+- read-only import of tracked real robot runtime recovery evidence
+- runtime recovery provenance trace through outcome estimate and recovery decision
 - bounded normal-decision -> failure -> recovery -> original-goal re-evaluation loop
 - explicit step/recovery/same-failure/cost budgets with structured aborts
 - immutable offline decision/execution trace with observable WorldState transitions
@@ -125,11 +125,11 @@ EmpiricalRecoveryOutcomeEstimator
 RecoveryDecisionEngine
 ```
 
-Recovery evidence matches exact goal, state context, failure code, failure attribution, and recovery action. `UNKNOWN` is never a wildcard. Recovery candidates must explicitly support the observed failure and satisfy state preconditions.
+Recovery evidence matches exact goal predicate, state context, failure code, failure attribution, and recovery action. `UNKNOWN` is never a wildcard. Recovery candidates must explicitly support the observed failure and satisfy state preconditions.
 
 The recovery estimator is an inspectable Beta-prior baseline, not a learned controller or novel AI algorithm. It selects only a high-level recovery identity; it does not generate motion.
 
-## Real recovery evidence integration
+## Real robot runtime recovery evidence integration
 
 Milestone 5 imports the tracked provider pair:
 
@@ -154,11 +154,59 @@ Goal -> Normal Decision -> Offline Execution
              -> explicit WorldState update -> original Goal Verification
 ```
 
-`ExecutionBudget` bounds total executed steps, recovery attempts, consecutive
-repeated failures, and total cost. Terminal failures and exhausted budgets return
+`ExecutionBudget` bounds total synchronous execution calls and recovery attempts,
+counts same-key failure recurrences across action successes, and checks reported
+cost after each returned observation. Terminal failures and exhausted budgets return
 structured `ABORT` results. A successful skill or recovery never implies goal
 success; `COMPLETE` is produced only after the updated `WorldState` passes the
 goal evaluator.
+
+## M6.1 integrity boundaries
+
+M6.1 hardens the existing offline/reference evaluation harness. Nested JSON-like
+record data is copied into read-only mappings and tuples, including state,
+experience, goals, observations, and the state snapshots retained in traces.
+An empty skill capability list is unsupported. The built-in goal evaluators
+support unparameterized `ON_TOP_OF`, `AT`, and `INSERTED` relations with explicit
+subject/reference identities, and the global `Goal("CANONICAL_READY")` without
+subject/reference/parameters. Other evaluator shapes return false.
+
+Provenance separates `artifact_snapshot_commit` from `experiment_runtime_commit`;
+`source_commit` remains the legacy artifact reference. Importers require a full
+snapshot SHA, preserve the manifest runtime SHA separately, and never expand
+historical abbreviated SHAs by guessing. All manifest and raw evidence paths
+must resolve within the declared provider root.
+
+Cost records declare `OBSERVED_COST`, `CONFIGURED_LIMIT`, or `UNKNOWN`, plus a
+unit. Only observed costs with a declared compatible unit contribute to the
+mean. Pick/Place's `max_pick_attempts` remains a configured limit. Estimates and
+candidate details expose `cost_evidence_count` and `cost_unit`; `mean_cost=0`
+with zero cost samples is a compatibility placeholder, not a zero-cost observation.
+Nominal costs remain caller-declared ranking penalties in the chosen cost unit.
+
+Normal/recovery executor exceptions and malformed returned observations produce
+a terminal `ABORT` with exception details in the trace. State remains the last
+known snapshot; cost of the failed call is `NOT_VERIFIED`, with zero added to the
+reported-cost accumulator. These are synchronous boundaries without timeout or
+cancellation. A callback that does not return is not bounded in wall-clock time.
+
+Action success does not reset the same-failure history while the goal remains
+false. The key is `(failure code, attribution)`; a different failure key starts
+a new recurrence count. No partial-progress detector or general failure-cycle
+prevention is claimed. The total-step bound remains authoritative for returned
+calls, including alternating failures and successful actions without goal completion.
+
+```text
+REAL_ROBOT_RUNTIME_RECOVERY_EVIDENCE = VERIFIED
+REAL_PHYSICAL_TASK_RECOVERY_EVIDENCE = NOT_VERIFIED
+WALL_CLOCK_BOUND = NOT_VERIFIED
+PROVIDER_TIMEOUT = NOT_VERIFIED
+PROVIDER_CANCEL = NOT_VERIFIED
+```
+
+These evidence statuses describe the preserved M5 stale-controller cleanup
+transcript. M6.1 performs no robot execution. See
+[the M6.1 verification report](docs/MILESTONE_6_1_VERIFICATION.md).
 
 ## Verification status
 
@@ -167,7 +215,8 @@ CLEAN_BASELINE = 12 passed
 PRE_M4_CURRENT_MAIN = 22 passed
 PRE_M5_CURRENT_MAIN = 30 passed
 PRE_M6_CURRENT_MAIN = 36 passed
-CURRENT_TOTAL = 45 passed
+PRE_M6_1_CURRENT_BRANCH = 45 passed
+CURRENT_TOTAL = 195 passed
 PYTHON_COMPILE = PASS
 
 MULTI_EXPERIENCE_MODEL = VERIFIED
@@ -200,7 +249,8 @@ RECOVERY_TO_STATE_REEVALUATION = VERIFIED
 GOAL_REEVALUATION_AFTER_RECOVERY = VERIFIED
 MAX_STEP_BOUND = VERIFIED
 RECOVERY_ATTEMPT_BOUND = VERIFIED
-SAME_FAILURE_LOOP_PREVENTION = VERIFIED
+SAME_FAILURE_NON_PROGRESS_REGRESSION = VERIFIED
+GENERAL_FAILURE_CYCLE_PREVENTION = NOT_VERIFIED
 TOTAL_COST_BOUND = VERIFIED
 TERMINAL_ABORT = VERIFIED
 DETERMINISTIC_BOUNDED_LOOP = VERIFIED

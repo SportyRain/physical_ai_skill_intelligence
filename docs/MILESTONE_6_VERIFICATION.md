@@ -75,7 +75,12 @@ NO_APPLICABLE_SKILL
 NO_APPLICABLE_RECOVERY
 ```
 
-`max_same_failure_repeats` counts consecutive recurrences after the first occurrence. A successful recovery does not erase the prior failure recurrence history before the original goal has made progress; therefore a repeated failure -> recovery -> same failure cycle cannot continue indefinitely. Any loop is also independently bounded by `max_total_steps`.
+M6.1 correction: `max_same_failure_repeats` counts recurrences of the same
+`(code, attribution)` after the first occurrence. Neither normal action success
+nor recovery success erases that history while the original goal remains false.
+A different failure key starts a new count; no partial-progress detector or
+general failure-cycle prevention is implemented. `max_total_steps` independently
+bounds synchronous calls that return. It is not a wall-clock timeout.
 
 ## Action success remains separate from goal success
 
@@ -112,7 +117,10 @@ The M5 raw evidence supports the stale ForceMode/Passthrough controller pair bec
 
 ## Execution trace
 
-Every executed normal skill or recovery produces one immutable `ExecutionTraceStep` containing:
+Every returned normal/recovery call produces an `ExecutionTraceStep`. M6.1 adds
+recursive immutable snapshots for its JSON-like goal, state, observation and
+experience-derived data; the original M6 frozen dataclass alone did not protect
+nested dictionaries. M6.1 also records normalized executor exceptions. Fields:
 
 ```text
 step_index
@@ -207,7 +215,8 @@ GOAL_REEVALUATION_AFTER_RECOVERY = VERIFIED
 
 MAX_STEP_BOUND = VERIFIED
 RECOVERY_ATTEMPT_BOUND = VERIFIED
-SAME_FAILURE_LOOP_PREVENTION = VERIFIED
+SAME_FAILURE_NON_PROGRESS_REGRESSION = VERIFIED
+GENERAL_FAILURE_CYCLE_PREVENTION = NOT_VERIFIED
 TOTAL_COST_BOUND = VERIFIED
 TERMINAL_ABORT = VERIFIED
 DETERMINISTIC_BOUNDED_LOOP = VERIFIED
@@ -225,3 +234,21 @@ NOVEL_AI_ALGORITHM = NOT_VERIFIED
 ```
 
 Offline completion does not establish real-robot autonomy or real-world performance improvement.
+
+
+## M6.1 claim clarification
+
+The M5 input is real robot runtime recovery evidence (exact stale-controller
+cleanup). It is not evidence of physical task recovery. M6 uses offline fixture
+callbacks; no real provider adapter or robot execution is established.
+
+```text
+REAL_ROBOT_RUNTIME_RECOVERY_EVIDENCE = VERIFIED
+REAL_PHYSICAL_TASK_RECOVERY_EVIDENCE = NOT_VERIFIED
+WALL_CLOCK_BOUND = NOT_VERIFIED
+PROVIDER_TIMEOUT = NOT_VERIFIED
+PROVIDER_CANCEL = NOT_VERIFIED
+```
+
+The counts above are historical M6 results. Current hardening validation is in
+[MILESTONE_6_1_VERIFICATION.md](MILESTONE_6_1_VERIFICATION.md).

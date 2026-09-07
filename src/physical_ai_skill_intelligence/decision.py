@@ -1,5 +1,6 @@
 from __future__ import annotations
 from dataclasses import dataclass
+from ._integrity import finite_number
 from .goal import Goal
 from .state import WorldState
 from .skill import SkillSpec
@@ -18,6 +19,8 @@ class CandidateDecision:
     estimator_method: str
     provenance_trace: tuple[Provenance, ...]
     score: float
+    cost_evidence_count: int = 0
+    cost_unit: str = "UNKNOWN"
 
 
 @dataclass(frozen=True)
@@ -44,6 +47,8 @@ class DecisionEngine:
     ):
         if ranking_mode not in {"weighted", "lexicographic_success_then_cost"}:
             raise ValueError("unsupported ranking_mode")
+        finite_number(cost_weight, "cost_weight")
+        finite_number(uncertainty_weight, "uncertainty_weight")
         self.estimator = estimator
         self.context_keys = context_keys
         self.cost_weight = cost_weight
@@ -79,6 +84,9 @@ class DecisionEngine:
             )
             rows.append((order, skill, est, score))
 
+        if len({row[2].cost_unit for row in rows if row[2].cost_evidence_count}) > 1:
+            raise ValueError("INCOMPATIBLE_COST_UNITS")
+
         if self.ranking_mode == "lexicographic_success_then_cost":
             # Preserve input order only as the final deterministic tie-break.
             rows.sort(
@@ -100,6 +108,8 @@ class DecisionEngine:
                 expected_success=row[2].success_probability,
                 evidence_count=row[2].evidence_count,
                 mean_cost=row[2].mean_cost,
+                cost_evidence_count=row[2].cost_evidence_count,
+                cost_unit=row[2].cost_unit,
                 uncertainty=row[2].uncertainty,
                 evidence_ids=row[2].evidence_ids,
                 estimator_method=row[2].method,
@@ -114,6 +124,8 @@ class DecisionEngine:
             f"evidence_count={best_est.evidence_count}; "
             f"p_success={best_est.success_probability:.6f}; "
             f"mean_cost={best_est.mean_cost:.6f}; uncertainty={best_est.uncertainty:.6f}; "
+            f"cost_evidence_count={best_est.cost_evidence_count}; "
+            f"cost_unit={best_est.cost_unit}; "
             f"evidence_ids={best_est.evidence_ids}; score={best_score:.6f}"
         )
         return Decision(

@@ -113,7 +113,7 @@ EXEC_RC = 0
 
 Post-recovery evidence preserves both stale controllers as inactive, `program_running=True`, and a final check-only `PA-000 / READY / FINAL_RC=0`.
 
-The importer requires the manifest and raw transcript to agree on these states. Corrupt raw evidence, a manifest/raw mismatch, an untracked raw path, or a different unsupported recovery family is rejected.
+The importer requires the manifest and raw transcript to agree on these states. Corrupt raw evidence, a manifest/raw mismatch, a path outside the supported evidence location, or a different unsupported recovery family is rejected.
 
 ## Normalized RecoveryExperienceRecord
 
@@ -126,7 +126,9 @@ failure_attribution = NONCANONICAL_CONTROLLER_ACTIVE
 recovery_action = CLEAN_STALE_FORCE_PASSTHROUGH
 recovery_success = true
 cost = 1.0
-cost_semantics = RECOVERY_EXECUTION_COUNT
+cost_semantics = OBSERVED_COST
+cost_unit = RECOVERY_EXECUTION_COUNT
+metrics.cost_semantics = RECOVERY_EXECUTION_COUNT (preserved legacy label)
 ```
 
 The cost is an explicit deterministic count of the single `EXECUTE AUTO CLEANUP` block in the raw transcript, not a guessed duration or performance score.
@@ -148,7 +150,8 @@ The record preserves:
 
 ```text
 Ur3VisualServoingRecoveryEvidenceImporter.import_run_manifest(...)
-RECOVERY_IMPORTER_VERSION = ur3_visual_servoing_recovery_evidence_v1
+RECOVERY_IMPORTER_VERSION = ur3_visual_servoing_recovery_evidence_v1 (historical M5)
+M6_1_RECOVERY_IMPORTER_VERSION = ur3_visual_servoing_recovery_evidence_v2
 ```
 
 The provider tree is accessed read-only. Derived normalized records remain reproducible from the tracked provider evidence snapshot.
@@ -246,3 +249,22 @@ NOVEL_AI_ALGORITHM = NOT_VERIFIED
 ```
 
 Milestone 5 does not reopen or upgrade any physical execution claim.
+
+
+## M6.1 provenance and claim clarification
+
+`artifact_snapshot_commit` is the provider evidence snapshot
+`fec0021d0d7b4ee076842923e7627f1e7486fa71`; `experiment_runtime_commit` preserves
+the manifest's `abbbf62489636641a9cada2d718af01304048cc5`. `source_commit` retains
+the artifact snapshot value for compatibility. These are distinct claims;
+SHA syntax validation does not prove experiment execution from a clean source tree.
+
+```text
+REAL_ROBOT_RUNTIME_RECOVERY_EVIDENCE = VERIFIED
+REAL_PHYSICAL_TASK_RECOVERY_EVIDENCE = NOT_VERIFIED
+```
+
+The transcript verifies runtime stale-controller cleanup, with no trajectory or
+force target command used to reproduce the stale pair. It does not demonstrate
+recovery of a failed physical manipulation task. M6.1 checks resolved path
+containment; the importer does not query Git to prove a file is tracked.

@@ -109,7 +109,7 @@ def test_real_recovery_success_updates_state_then_goal_complete():
             RecoverySpec("CLEAN_STALE_FORCE_PASSTHROUGH", (record.failure_code,), provider="ur3_visual_servoing"),
         ],
     )
-    result = loop.run(goal=Goal("CANONICAL_READY", subject="ur3_runtime"), initial_state=initial)
+    result = loop.run(goal=Goal("CANONICAL_READY"), initial_state=initial)
 
     assert result.status == "COMPLETE"
     assert result.goal_satisfied is True
@@ -313,3 +313,83 @@ def test_determinism_same_inputs_produce_identical_trace_and_terminal_result():
     assert first == second
     assert first.trace == second.trace
     assert first.status == "COMPLETE"
+
+
+def test_prior_trace_survives_later_nested_state_and_input_mutation():
+    original = {"nested": [{"value": 0}]}
+    updates = {"nested": [{"value": 1}]}
+    calls = []
+
+    def normal(_skill, _goal, state):
+        calls.append(state)
+        if len(calls) == 1:
+            return ExecutionObservation(True, updates, details=updates)
+        original["nested"][0]["value"] = 99
+        updates["nested"][0]["value"] = 99
+        return ExecutionObservation(True, {"nested": [{"value": 2}]})
+
+    result = _executor(normal_executor=normal, recovery_executor=lambda *_: None,
+                       budget=ExecutionBudget(2, 0, 0, 0)).run(
+                           goal=Goal("CANONICAL_READY"), initial_state=WorldState(original))
+    first = result.trace[0]
+    assert first.state_before.get("nested")[0]["value"] == 0
+    assert first.state_after.get("nested")[0]["value"] == 1
+    assert first.observed_result.details["nested"][0]["value"] == 1
+    assert result.final_state.get("nested")[0]["value"] == 2
+    import pytest
+    with pytest.raises(TypeError):
+        result.final_state.facts["nested"][0]["value"] = 3
+
+
+def test_same_failure_history_survives_normal_success_without_goal_progress():
+    observations = iter([
+        ExecutionObservation(False, failure=FailureState("PA-READY-818")),
+        ExecutionObservation(True, {"irrelevant": 1}),
+        ExecutionObservation(False, failure=FailureState("PA-READY-818")),
+    ])
+    result = _executor(
+        normal_executor=lambda *_: next(observations),
+        recovery_executor=lambda *_: ExecutionObservation(True),
+        budget=ExecutionBudget(10, 5, 1, 20),
+    ).run(goal=Goal("CANONICAL_READY"), initial_state=WorldState())
+    assert result.status == "ABORT"
+    assert result.abort_reason == "MAX_SAME_FAILURE_REPEATS_EXCEEDED"
+    assert result.total_steps == 4
+    assert result.trace[2].observed_result.action_success
+    assert not any(step.goal_satisfied_after for step in result.trace)
+
+
+def test_both_executor_exceptions_become_auditable_terminal_aborts():
+    for phase in ("NORMAL", "RECOVERY"):
+        def broken(*_args):
+            raise RuntimeError("fixture executor failed")
+
+        result = _executor(
+            normal_executor=broken if phase == "NORMAL" else lambda *_: ExecutionObservation(
+                False, failure=FailureState("PA-READY-818")),
+            recovery_executor=broken,
+        ).run(goal=Goal("CANONICAL_READY"), initial_state=WorldState({"before": 1}))
+        assert result.status == "ABORT"
+        assert result.abort_reason == f"TERMINAL_FAILURE:{phase}_EXECUTOR_EXCEPTION"
+        assert result.total_steps == (1 if phase == "NORMAL" else 2)
+        assert result.recovery_attempts == (0 if phase == "NORMAL" else 1)
+        step = result.trace[-1]
+        assert step.phase == f"{phase}_EXECUTION"
+        assert step.terminal_status == "ABORT"
+        assert step.state_before == step.state_after == result.final_state
+        assert step.observed_result.details["exception_type"] == "RuntimeError"
+        assert step.observed_result.details["exception_message"] == "fixture executor failed"
+        assert step.observed_result.details["execution_cost"] == "NOT_VERIFIED"
+
+
+def test_invalid_executor_result_is_normalized_without_applying_updates():
+    for result_factory in (
+        lambda: None,
+        lambda: ExecutionObservation(True, {"goal:CANONICAL_READY": True}, failure=FailureState("BAD")),
+    ):
+        result = _executor(normal_executor=lambda *_: result_factory(),
+                           recovery_executor=lambda *_: None).run(
+                               goal=Goal("CANONICAL_READY"), initial_state=WorldState())
+        assert result.status == "ABORT"
+        assert result.abort_reason == "TERMINAL_FAILURE:NORMAL_EXECUTOR_EXCEPTION"
+        assert not result.goal_satisfied

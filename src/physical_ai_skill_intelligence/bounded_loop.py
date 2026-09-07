@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any, Callable
 
+from ._integrity import snapshot_mapping, finite_number
 from .decision import Decision, DecisionEngine
 from .goal import Goal
 from .goal_verification import goal_satisfied
@@ -18,15 +20,20 @@ class ExecutionBudget:
     max_same_failure_repeats: int
     max_total_cost: float
 
+    def __post_init__(self) -> None:
+        self.validate()
+
     def validate(self) -> None:
+        for name in ("max_total_steps", "max_recovery_attempts", "max_same_failure_repeats"):
+            if type(getattr(self, name)) is not int:
+                raise ValueError(f"{name} must be an integer")
         if self.max_total_steps <= 0:
             raise ValueError("max_total_steps must be > 0")
         if self.max_recovery_attempts < 0:
             raise ValueError("max_recovery_attempts must be >= 0")
         if self.max_same_failure_repeats < 0:
             raise ValueError("max_same_failure_repeats must be >= 0")
-        if self.max_total_cost < 0:
-            raise ValueError("max_total_cost must be >= 0")
+        finite_number(self.max_total_cost, "max_total_cost")
 
 
 @dataclass(frozen=True)
@@ -38,18 +45,28 @@ class ExecutionObservation:
     """
 
     action_success: bool
-    state_updates: dict[str, Any] = field(default_factory=dict)
+    state_updates: Mapping[str, Any] = field(default_factory=dict)
     cost: float = 0.0
     failure: FailureState | None = None
     retryable: bool = True
     terminal_failure: bool = False
-    details: dict[str, Any] = field(default_factory=dict)
+    details: Mapping[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "state_updates", snapshot_mapping(self.state_updates))
+        object.__setattr__(self, "details", snapshot_mapping(self.details))
+        self.validate()
 
     def validate(self) -> None:
         if not isinstance(self.action_success, bool):
             raise ValueError("action_success must be bool")
-        if self.cost < 0:
-            raise ValueError("cost must be >= 0")
+        finite_number(self.cost, "cost")
+        if type(self.retryable) is not bool or type(self.terminal_failure) is not bool:
+            raise ValueError("retryable and terminal_failure must be bool")
+        if self.action_success and (self.failure is not None or self.terminal_failure):
+            raise ValueError("successful execution cannot carry a failure")
+        if self.terminal_failure and self.retryable:
+            raise ValueError("terminal failure cannot be retryable")
         if not self.action_success and self.failure is None:
             raise ValueError("failed execution requires explicit failure")
         if self.failure is not None:
@@ -124,6 +141,25 @@ class BoundedDecisionRecoveryExecutor:
         self.recovery_executor = recovery_executor
         self.budget = budget
         self.goal_evaluator = goal_evaluator
+
+    @staticmethod
+    def _execute(executor, *args, phase: str) -> ExecutionObservation:
+        # Only the synchronous call/result boundary is normalized. No timeout or cancel.
+        try:
+            observation = executor(*args)
+            if not isinstance(observation, ExecutionObservation):
+                raise ValueError("executor must return ExecutionObservation")
+            observation.validate()
+            return observation
+        except Exception as exc:
+            return ExecutionObservation(
+                action_success=False,
+                failure=FailureState(f"{phase}_EXECUTOR_EXCEPTION"),
+                retryable=False,
+                terminal_failure=True,
+                details={"exception_type": type(exc).__name__, "exception_message": str(exc),
+                         "execution_cost": "NOT_VERIFIED", "state_updates": "NOT_VERIFIED"},
+            )
 
     @staticmethod
     def _apply_updates(state: WorldState, updates: dict[str, Any]) -> WorldState:
@@ -233,8 +269,9 @@ class BoundedDecisionRecoveryExecutor:
                     )
 
                 before = state
-                observation = self.normal_executor(decision.selected_skill, goal, before)
-                observation.validate()
+                observation = self._execute(
+                    self.normal_executor, decision.selected_skill, goal, before, phase="NORMAL"
+                )
                 state = self._apply_updates(before, observation.state_updates)
                 total_steps += 1
                 total_cost += observation.cost
@@ -246,8 +283,7 @@ class BoundedDecisionRecoveryExecutor:
                 elif observation.action_success:
                     # A successful skill execution is not automatically goal success.
                     current_failure = None
-                    last_failure_key = None
-                    same_failure_repeats = 0
+                    # Goal false provides no verified progress boundary. Retain history.
                 else:
                     assert observation.failure is not None
                     current_failure = observation.failure
@@ -350,13 +386,14 @@ class BoundedDecisionRecoveryExecutor:
 
             before = state
             observed_failure = current_failure
-            observation = self.recovery_executor(
+            observation = self._execute(
+                self.recovery_executor,
                 recovery_decision.selected_recovery,
                 goal,
                 before,
                 observed_failure,
+                phase="RECOVERY",
             )
-            observation.validate()
             state = self._apply_updates(before, observation.state_updates)
             recovery_attempts += 1
             total_steps += 1

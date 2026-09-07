@@ -2,11 +2,18 @@ from __future__ import annotations
 from .goal import Goal
 from .state import WorldState
 
+
 def goal_satisfied(goal: Goal, state: WorldState) -> bool:
-    if goal.predicate == "ON_TOP_OF":
-        return state.get(f"on_top_of:{goal.subject}:{goal.reference}") is True
-    if goal.predicate == "AT":
-        return state.get(f"at:{goal.subject}:{goal.reference}") is True
-    if goal.predicate == "INSERTED":
-        return state.get(f"inserted:{goal.subject}:{goal.reference}") is True
-    return state.get(f"goal:{goal.predicate}") is True
+    # No evaluator currently interprets parameters. Never erase their identity.
+    if goal.parameters:
+        return False
+    if goal.predicate in {"ON_TOP_OF", "AT", "INSERTED"}:
+        # The legacy relation fact format uses ':' as a delimiter.
+        if any(not isinstance(value, str) or not value or ":" in value
+               for value in (goal.subject, goal.reference)):
+            return False
+        return state.get(f"{goal.predicate.lower()}:{goal.subject}:{goal.reference}") is True
+    # Explicit global evaluator: subject/reference variants are unsupported.
+    if goal.predicate == "CANONICAL_READY" and goal.subject is None and goal.reference is None:
+        return state.get("goal:CANONICAL_READY") is True
+    return False

@@ -4,9 +4,9 @@ from physical_ai_skill_intelligence import EmpiricalOutcomeEstimator
 def test_empirical_estimate_uses_only_exact_context():
     ctx = {"visibility": "GOOD"}
     store = ExperienceStore([
-        ExperienceRecord("AT", ctx, "a", True, cost=2),
-        ExperienceRecord("AT", ctx, "a", False, cost=4),
-        ExperienceRecord("AT", {"visibility": "BAD"}, "a", True, cost=1),
+        ExperienceRecord("AT", ctx, "a", True, cost=2, cost_semantics="OBSERVED_COST", cost_unit="ATTEMPT_COUNT"),
+        ExperienceRecord("AT", ctx, "a", False, cost=4, cost_semantics="OBSERVED_COST", cost_unit="ATTEMPT_COUNT"),
+        ExperienceRecord("AT", {"visibility": "BAD"}, "a", True, cost=1, cost_semantics="OBSERVED_COST", cost_unit="ATTEMPT_COUNT"),
     ])
     est = EmpiricalOutcomeEstimator(store).estimate(
         goal_predicate="AT",

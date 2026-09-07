@@ -9,10 +9,12 @@ import re
 from typing import Any, Mapping
 
 from .experience import UNKNOWN
-from .provenance import Provenance, SourceArtifact
+from .provenance import Provenance, SourceArtifact, validate_commit, runtime_commit
+from ._evidence_paths import contained_path, validate_raw_paths
+from .cost import OBSERVED_COST
 from .recovery import RecoveryExperienceRecord
 
-RECOVERY_IMPORTER_VERSION = "ur3_visual_servoing_recovery_evidence_v1"
+RECOVERY_IMPORTER_VERSION = "ur3_visual_servoing_recovery_evidence_v2"
 SOURCE_REPOSITORY = "SportyRain/ur3_visual_servoing"
 RUN_MANIFEST_SCHEMA = "UNVERSIONED_RUN_MANIFEST"
 READY_RECOVERY_GOAL = "CANONICAL_READY"
@@ -125,14 +127,18 @@ class Ur3VisualServoingRecoveryEvidenceImporter:
     provider_commit: str
     source_repository: str = SOURCE_REPOSITORY
 
+    def __post_init__(self) -> None:
+        validate_commit(self.provider_commit, "provider_commit", allow_unknown=False)
+
     def import_run_manifest(
         self,
         run_path: str | Path,
         *,
         provider_root: str | Path | None = None,
     ) -> tuple[RecoveryExperienceRecord, ...]:
-        path = Path(run_path)
-        root = Path(provider_root) if provider_root is not None else path.parents[2]
+        path = Path(run_path).absolute()
+        root = Path(provider_root).resolve() if provider_root is not None else path.parents[2].resolve()
+        path = contained_path(root, path, RecoveryEvidenceImportError)
         manifest_raw = _read(path)
         manifest = _load_json_bytes(manifest_raw, source=str(path))
         experiment_id = str(_required(manifest, "experiment_id"))
@@ -174,7 +180,8 @@ class Ur3VisualServoingRecoveryEvidenceImporter:
             raise RecoveryEvidenceImportError(
                 "recovery raw evidence must be a tracked evidence/logs path"
             )
-        transcript_raw = _read(root / transcript_rel)
+        validate_raw_paths(root, raw_evidence, RecoveryEvidenceImportError)
+        transcript_raw = _read(contained_path(root, root / transcript_rel, RecoveryEvidenceImportError))
         try:
             transcript = transcript_raw.decode("utf-8")
         except UnicodeDecodeError as exc:
@@ -290,6 +297,8 @@ class Ur3VisualServoingRecoveryEvidenceImporter:
         provenance = Provenance(
             source_repository=self.source_repository,
             source_commit=self.provider_commit,
+            artifact_snapshot_commit=self.provider_commit,
+            experiment_runtime_commit=runtime_commit(manifest.get("commit")),
             source_path=manifest_rel,
             source_record_id=experiment_id,
             raw_sha256=_sha256(manifest_raw),
@@ -307,6 +316,8 @@ class Ur3VisualServoingRecoveryEvidenceImporter:
             recovery_action=READY_STALE_RECOVERY_ACTION,
             recovery_success=True,
             cost=1.0,
+            cost_semantics=OBSERVED_COST,
+            cost_unit="RECOVERY_EXECUTION_COUNT",
             experience_id=f"{self.source_repository}:{experiment_id}:RECOVERY",
             provenance=provenance,
             metrics={

@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from typing import Any, Iterable
 
+from ._integrity import snapshot_mapping, snapshot, finite_number
+from .cost import validate_cost_semantics, observed_cost
 from .goal import Goal
 from .provenance import Provenance
 from .state import UNKNOWN, WorldState
@@ -14,7 +17,12 @@ class FailureState:
 
     code: str
     attribution: Any = UNKNOWN
-    details: dict[str, Any] = field(default_factory=dict)
+    details: Mapping[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "details", snapshot_mapping(self.details))
+        object.__setattr__(self, "attribution", snapshot(self.attribution))
+        self.validate()
 
     def validate(self) -> None:
         if not isinstance(self.code, str) or not self.code:
@@ -27,17 +35,21 @@ class RecoverySpec:
 
     name: str
     failure_codes: tuple[str, ...]
-    preconditions: dict[str, Any] = field(default_factory=dict)
+    preconditions: Mapping[str, Any] = field(default_factory=dict)
     provider: str = "UNKNOWN"
     nominal_cost: float = 0.0
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "preconditions", snapshot_mapping(self.preconditions))
+        object.__setattr__(self, "failure_codes", tuple(self.failure_codes))
+        self.validate()
 
     def validate(self) -> None:
         if not self.name:
             raise ValueError("recovery name is required")
         if not self.failure_codes:
             raise ValueError("recovery failure_codes must be explicit")
-        if self.nominal_cost < 0:
-            raise ValueError("recovery nominal_cost must be >= 0")
+        finite_number(self.nominal_cost, "nominal_cost")
 
     def supports_failure(self, failure_code: str) -> bool:
         # Deliberately exact: neither UNKNOWN nor a missing list is a wildcard.
@@ -49,7 +61,7 @@ class RecoveryExperienceRecord:
     """One explicitly recovery-labelled outcome observation."""
 
     goal_predicate: str
-    state_context: dict[str, Any]
+    state_context: Mapping[str, Any]
     failure_code: str
     failure_attribution: Any
     recovery_action: str
@@ -57,7 +69,17 @@ class RecoveryExperienceRecord:
     cost: float = 0.0
     experience_id: str = UNKNOWN
     provenance: Provenance | None = None
-    metrics: dict[str, Any] = field(default_factory=dict)
+    metrics: Mapping[str, Any] = field(default_factory=dict)
+
+    cost_semantics: str = UNKNOWN
+    cost_unit: str = UNKNOWN
+
+    def __post_init__(self) -> None:
+        for name in ("state_context", "metrics"):
+            object.__setattr__(self, name, snapshot_mapping(getattr(self, name)))
+        object.__setattr__(self, "failure_attribution", snapshot(self.failure_attribution))
+        finite_number(self.cost, "cost")
+        validate_cost_semantics(self.cost_semantics, self.cost_unit)
 
     def validate(self) -> None:
         if not self.goal_predicate:
@@ -68,8 +90,8 @@ class RecoveryExperienceRecord:
             raise ValueError("recovery_action is required")
         if not isinstance(self.recovery_success, bool):
             raise ValueError("recovery_success must be bool")
-        if self.cost < 0:
-            raise ValueError("cost must be >= 0")
+        finite_number(self.cost, "cost")
+        validate_cost_semantics(self.cost_semantics, self.cost_unit)
         if self.provenance is not None:
             self.provenance.validate()
 
@@ -104,6 +126,7 @@ class RecoveryExperienceStore:
     ) -> tuple[RecoveryExperienceRecord, ...]:
         failure.validate()
         rows = []
+        state_context = snapshot_mapping(state_context)
         for record in self._records:
             if record.goal_predicate != goal_predicate:
                 continue
@@ -130,6 +153,8 @@ class RecoveryOutcomeEstimate:
     failures: int
     evidence_ids: tuple[str, ...]
     provenance_trace: tuple[Provenance, ...]
+    cost_evidence_count: int = 0
+    cost_unit: str = UNKNOWN
 
 
 class EmpiricalRecoveryOutcomeEstimator:
@@ -142,8 +167,8 @@ class EmpiricalRecoveryOutcomeEstimator:
         alpha: float = 1.0,
         beta: float = 1.0,
     ):
-        if alpha <= 0 or beta <= 0:
-            raise ValueError("alpha and beta must be > 0")
+        finite_number(alpha, "alpha", positive=True)
+        finite_number(beta, "beta", positive=True)
         self.store = store
         self.alpha = alpha
         self.beta = beta
@@ -165,8 +190,9 @@ class EmpiricalRecoveryOutcomeEstimator:
         n = len(rows)
         successes = sum(1 for row in rows if row.recovery_success)
         failures = n - successes
-        probability = (successes + self.alpha) / (n + self.alpha + self.beta)
-        mean_cost = sum(row.cost for row in rows) / n if n else 0.0
+        scale = max(n, self.alpha, self.beta)
+        probability = (successes / scale + self.alpha / scale) / (n / scale + self.alpha / scale + self.beta / scale)
+        mean_cost, cost_count, cost_unit = observed_cost(rows)
         evidence_ids = tuple(
             row.experience_id if row.experience_id != UNKNOWN else f"LEGACY:{i}"
             for i, row in enumerate(rows)
@@ -176,6 +202,8 @@ class EmpiricalRecoveryOutcomeEstimator:
             success_probability=probability,
             evidence_count=n,
             mean_cost=mean_cost,
+            cost_evidence_count=cost_count,
+            cost_unit=cost_unit,
             uncertainty=1.0 / (n + 1.0),
             method=(
                 "explicit_beta_prior_no_recovery_evidence"
@@ -199,6 +227,8 @@ class RecoveryCandidateDecision:
     evidence_ids: tuple[str, ...]
     estimator_method: str
     provenance_trace: tuple[Provenance, ...]
+    cost_evidence_count: int = 0
+    cost_unit: str = UNKNOWN
 
 
 @dataclass(frozen=True)
@@ -249,6 +279,9 @@ class RecoveryDecisionEngine:
         if not applicable:
             raise RuntimeError("NO_APPLICABLE_RECOVERY")
 
+        if len({row[2].cost_unit for row in applicable if row[2].cost_evidence_count}) > 1:
+            raise ValueError("INCOMPATIBLE_COST_UNITS")
+
         applicable.sort(
             key=lambda row: (
                 -row[2].success_probability,
@@ -264,6 +297,8 @@ class RecoveryDecisionEngine:
                 expected_success=estimate.success_probability,
                 evidence_count=estimate.evidence_count,
                 mean_cost=estimate.mean_cost,
+                cost_evidence_count=estimate.cost_evidence_count,
+                cost_unit=estimate.cost_unit,
                 uncertainty=estimate.uncertainty,
                 evidence_ids=estimate.evidence_ids,
                 estimator_method=estimate.method,
@@ -278,6 +313,8 @@ class RecoveryDecisionEngine:
             f"p_recovery_success={selected_estimate.success_probability:.6f}; "
             f"mean_cost={selected_estimate.mean_cost:.6f}; "
             f"uncertainty={selected_estimate.uncertainty:.6f}; "
+            f"cost_evidence_count={selected_estimate.cost_evidence_count}; "
+            f"cost_unit={selected_estimate.cost_unit}; "
             f"evidence_ids={selected_estimate.evidence_ids}"
         )
         return RecoveryDecision(

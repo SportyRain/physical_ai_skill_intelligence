@@ -7,11 +7,14 @@ import json
 from pathlib import Path
 import re
 from typing import Any, Mapping
+from math import isfinite
 
 from .experience import ExperienceRecord, UNKNOWN
-from .provenance import Provenance, SourceArtifact
+from .provenance import Provenance, SourceArtifact, validate_commit, runtime_commit
+from ._evidence_paths import contained_path, validate_raw_paths
+from .cost import OBSERVED_COST, CONFIGURED_LIMIT
 
-IMPORTER_VERSION = "ur3_visual_servoing_evidence_v1"
+IMPORTER_VERSION = "ur3_visual_servoing_evidence_v2"
 SOURCE_REPOSITORY = "SportyRain/ur3_visual_servoing"
 RUN_MANIFEST_SCHEMA = "UNVERSIONED_RUN_MANIFEST"
 
@@ -90,16 +93,21 @@ class Ur3VisualServoingEvidenceImporter:
     provider_commit: str
     source_repository: str = SOURCE_REPOSITORY
 
+    def __post_init__(self) -> None:
+        validate_commit(self.provider_commit, "provider_commit", allow_unknown=False)
+
     def import_run_manifest(
         self,
         run_path: str | Path,
         *,
         provider_root: str | Path | None = None,
     ) -> tuple[ExperienceRecord, ...]:
-        path = Path(run_path)
-        root = Path(provider_root) if provider_root is not None else path.parents[2]
+        path = Path(run_path).absolute()
+        root = Path(provider_root).resolve() if provider_root is not None else path.parents[2].resolve()
+        path = contained_path(root, path, EvidenceImportError)
         raw = _read(path)
         manifest = _load_json_bytes(raw, source=str(path))
+        validate_raw_paths(root, manifest.get("raw_evidence", []), EvidenceImportError)
         experiment_id = str(_required(manifest, "experiment_id"))
         repository = str(_required(manifest, "repository"))
         if repository != self.source_repository:
@@ -138,6 +146,8 @@ class Ur3VisualServoingEvidenceImporter:
         provenance = Provenance(
             source_repository=self.source_repository,
             source_commit=self.provider_commit,
+            artifact_snapshot_commit=self.provider_commit,
+            experiment_runtime_commit=runtime_commit(manifest.get("commit")),
             source_path=manifest_rel,
             source_record_id=source_record_id,
             raw_sha256=_sha256(manifest_raw),
@@ -166,7 +176,7 @@ class Ur3VisualServoingEvidenceImporter:
         )
         if readback_rel is None:
             raise EvidenceImportError("Push experience readback link is missing")
-        readback_raw = _read(root / readback_rel)
+        readback_raw = _read(contained_path(root, root / readback_rel, EvidenceImportError))
         try:
             readback = readback_raw.decode("utf-8")
         except UnicodeDecodeError as exc:
@@ -188,7 +198,7 @@ class Ur3VisualServoingEvidenceImporter:
         direction = metrics.get("direction", UNKNOWN)
         relative_goal = metrics.get("relative_goal_displacement_m", UNKNOWN)
         tolerance = metrics.get("goal_tolerance_m", UNKNOWN)
-        if not isinstance(tolerance, (int, float)) or tolerance < 0:
+        if type(tolerance) not in (int, float) or not isfinite(tolerance) or tolerance < 0:
             raise EvidenceImportError("invalid Push goal tolerance")
 
         context = {
@@ -213,11 +223,11 @@ class Ur3VisualServoingEvidenceImporter:
             attempt_count = metrics.get(f"trial{idx}_attempt_count")
             final_error = metrics.get(f"trial{idx}_final_goal_error_m")
             first_action = metrics.get(f"trial{idx}_first_action_m")
-            if not isinstance(attempt_count, int) or attempt_count <= 0:
+            if type(attempt_count) is not int or attempt_count <= 0:
                 raise EvidenceImportError(f"invalid Push trial{idx}_attempt_count")
-            if not isinstance(final_error, (int, float)) or final_error < 0:
+            if type(final_error) not in (int, float) or not isfinite(final_error) or final_error < 0:
                 raise EvidenceImportError(f"invalid Push trial{idx}_final_goal_error_m")
-            if not isinstance(first_action, (int, float)) or first_action <= 0:
+            if type(first_action) not in (int, float) or not isfinite(first_action) or first_action <= 0:
                 raise EvidenceImportError(f"invalid Push trial{idx}_first_action_m")
 
             # Explicit, inspectable derivation from two raw manifest metrics.
@@ -236,6 +246,8 @@ class Ur3VisualServoingEvidenceImporter:
                 skill_name=skill_names[idx - 1],
                 success=task_success,
                 cost=float(attempt_count),
+                cost_semantics=OBSERVED_COST,
+                cost_unit="ATTEMPT_COUNT",
                 failure_code=None if task_success else "FINAL_GOAL_ERROR_EXCEEDS_TOLERANCE",
                 metrics={
                     "attempt_count": attempt_count,
@@ -328,8 +340,8 @@ class Ur3VisualServoingEvidenceImporter:
 
         trial_id = experiment_id
         experience_id = f"{self.source_repository}:{experiment_id}"
-        attempt_count = metrics.get("max_pick_attempts", 0)
-        if not isinstance(attempt_count, int) or attempt_count < 0:
+        attempt_limit = metrics.get("max_pick_attempts")
+        if attempt_limit is not None and (type(attempt_limit) is not int or attempt_limit < 0):
             raise EvidenceImportError("invalid Pick/Place max_pick_attempts")
         place_xyz = [
             metrics.get("place_x_m", UNKNOWN),
@@ -350,7 +362,9 @@ class Ur3VisualServoingEvidenceImporter:
             state_context=context,
             skill_name="pick_place/real_runtime",
             success=task_success,
-            cost=float(attempt_count),
+            cost=float(attempt_limit) if attempt_limit is not None else 0.0,
+            cost_semantics=CONFIGURED_LIMIT if attempt_limit is not None else UNKNOWN,
+            cost_unit="ATTEMPT_COUNT" if attempt_limit is not None else UNKNOWN,
             failure_code=(
                 None
                 if action_success is True

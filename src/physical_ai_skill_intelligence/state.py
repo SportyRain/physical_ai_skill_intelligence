@@ -1,12 +1,16 @@
 from __future__ import annotations
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, Mapping
+from ._integrity import snapshot_mapping, snapshot
 
 UNKNOWN = "UNKNOWN"
 
 @dataclass(frozen=True)
 class WorldState:
-    facts: dict[str, Any] = field(default_factory=dict)
+    facts: Mapping[str, Any] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "facts", snapshot_mapping(self.facts))
 
     def get(self, key: str, default: Any = UNKNOWN) -> Any:
         return self.facts.get(key, default)
@@ -16,7 +20,7 @@ class WorldState:
             actual = self.get(key)
             if actual == UNKNOWN:
                 return False
-            if actual != required:
+            if actual != snapshot(required):
                 return False
         return True
 
