@@ -25,6 +25,14 @@ from .recovery_benchmark import (
     RecoveryEvidenceBenchmarkResult,
     run_ready_recovery_decision_benchmark,
 )
+from .bounded_loop import (
+    ExecutionBudget,
+    ExecutionObservation,
+    BudgetRemaining,
+    ExecutionTraceStep,
+    TerminalResult,
+    BoundedDecisionRecoveryExecutor,
+)
 
 __all__ = [
     "Goal",
@@ -57,4 +65,10 @@ __all__ = [
     "Ur3VisualServoingRecoveryEvidenceImporter",
     "RecoveryEvidenceBenchmarkResult",
     "run_ready_recovery_decision_benchmark",
+    "ExecutionBudget",
+    "ExecutionObservation",
+    "BudgetRemaining",
+    "ExecutionTraceStep",
+    "TerminalResult",
+    "BoundedDecisionRecoveryExecutor",
 ]

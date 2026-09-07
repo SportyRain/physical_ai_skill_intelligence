@@ -38,6 +38,9 @@ Goal + Current World State + Failure + Candidate Recoveries + Past Recovery Expe
 Milestone 5 connects tracked real failure/recovery evidence to that recovery
 decision path without executing the provider or the robot.
 
+Milestone 6 composes the existing normal and recovery decisions into a bounded
+offline decision -> failure -> recovery -> state re-evaluation loop.
+
 ## Authoritative repository
 
 ```text
@@ -61,6 +64,9 @@ status: VERIFIED
 - deterministic recovery outcome estimation and ranking
 - read-only import of tracked real recovery evidence
 - real recovery provenance trace through outcome estimate and recovery decision
+- bounded normal-decision -> failure -> recovery -> original-goal re-evaluation loop
+- explicit step/recovery/same-failure/cost budgets with structured aborts
+- immutable offline decision/execution trace with observable WorldState transitions
 - offline negative and regression tests
 
 ## Stable provider investigated
@@ -136,13 +142,32 @@ The raw transcript explicitly records `PA-READY-818 / NONCANONICAL_CONTROLLER_AC
 
 The normalized record uses the existing provider high-level action identity `CLEAN_STALE_FORCE_PASSTHROUGH`. In the offline benchmark the no-evidence tie selects `LEAVE_CONTROLLER_UNCHANGED`; with the one applicable real recovery record, `CLEAN_STALE_FORCE_PASSTHROUGH` is selected with `P(recovery_success)=2/3` and evidence count 1. This verifies evidence influence, not general decision superiority.
 
+## Bounded decision / recovery loop
+
+Milestone 6 adds only a software-level executor that composes the existing
+`DecisionEngine` and `RecoveryDecisionEngine`:
+
+```text
+Goal -> Normal Decision -> Offline Execution
+  success -> explicit WorldState update -> Goal Verification
+  failure -> Recovery Decision -> Offline Recovery Execution
+             -> explicit WorldState update -> original Goal Verification
+```
+
+`ExecutionBudget` bounds total executed steps, recovery attempts, consecutive
+repeated failures, and total cost. Terminal failures and exhausted budgets return
+structured `ABORT` results. A successful skill or recovery never implies goal
+success; `COMPLETE` is produced only after the updated `WorldState` passes the
+goal evaluator.
+
 ## Verification status
 
 ```text
 CLEAN_BASELINE = 12 passed
 PRE_M4_CURRENT_MAIN = 22 passed
 PRE_M5_CURRENT_MAIN = 30 passed
-CURRENT_TOTAL = 36 passed
+PRE_M6_CURRENT_MAIN = 36 passed
+CURRENT_TOTAL = 45 passed
 PYTHON_COMPILE = PASS
 
 MULTI_EXPERIENCE_MODEL = VERIFIED
@@ -167,6 +192,20 @@ REAL_RECOVERY_EVIDENCE_INFLUENCES_DECISION = VERIFIED
 OFFLINE_REAL_RECOVERY_EVIDENCE_REGRESSION = VERIFIED
 SELECTED_RECOVERY_CHANGED_IN_OFFLINE_REAL_EVIDENCE_BENCHMARK = YES
 
+MILESTONE_6_BOUNDED_DECISION_RECOVERY_LOOP = VERIFIED
+BOUNDED_DECISION_RECOVERY_LOOP = VERIFIED
+NORMAL_DECISION_TO_FAILURE_TRANSITION = VERIFIED
+FAILURE_TO_RECOVERY_DECISION = VERIFIED
+RECOVERY_TO_STATE_REEVALUATION = VERIFIED
+GOAL_REEVALUATION_AFTER_RECOVERY = VERIFIED
+MAX_STEP_BOUND = VERIFIED
+RECOVERY_ATTEMPT_BOUND = VERIFIED
+SAME_FAILURE_LOOP_PREVENTION = VERIFIED
+TOTAL_COST_BOUND = VERIFIED
+TERMINAL_ABORT = VERIFIED
+DETERMINISTIC_BOUNDED_LOOP = VERIFIED
+OFFLINE_DECISION_RECOVERY_REGRESSION = VERIFIED
+
 REAL_RECOVERY_PROVIDER_ADAPTER = NOT_VERIFIED
 REAL_UR3_PROVIDER_ADAPTER = NOT_VERIFIED
 REAL_ROBOT_EXECUTION = NOT_VERIFIED
@@ -176,7 +215,7 @@ SELF_LEARNING = NOT_VERIFIED
 NOVEL_AI_ALGORITHM = NOT_VERIFIED
 ```
 
-See `docs/MILESTONE_1_3_VERIFICATION.md`, `docs/MILESTONE_4_VERIFICATION.md`, and `docs/MILESTONE_5_VERIFICATION.md` for verification boundaries.
+See `docs/MILESTONE_1_3_VERIFICATION.md`, `docs/MILESTONE_4_VERIFICATION.md`, `docs/MILESTONE_5_VERIFICATION.md`, and `docs/MILESTONE_6_VERIFICATION.md` for verification boundaries.
 
 ## Run
 
