@@ -33,6 +33,7 @@ def software_result_to_observation(result: ProviderResult) -> ExecutionObservati
             "cost_semantics": result.cost.semantics,
             "cost_unit": result.cost.unit,
             "runtime_contract": asdict(result.runtime_contract),
+            "runtime_result": asdict(result.runtime_result),
             "physical_state_updates": "NOT_VERIFIED",
         },
     )
