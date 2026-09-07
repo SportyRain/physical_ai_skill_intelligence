@@ -1,0 +1,36 @@
+name: m8-timeout-cancel-wall-clock-branch-test
+
+on:
+  push:
+    branches:
+      - m8-timeout-cancel-wall-clock-software
+
+jobs:
+  software-only:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install test dependency
+        run: python -m pip install --disable-pip-version-check pytest
+      - name: Compile changed consumer boundary
+        env:
+          PYTHONPATH: src
+        run: |
+          python -m py_compile src/physical_ai_skill_intelligence/adapters/real_ur3_free_space.py
+          python -m py_compile tests/test_real_ur3_free_space_adapter.py
+      - name: Run focused M8 consumer tests
+        env:
+          PYTHONPATH: src
+        run: >-
+          python -m pytest -q
+          tests/test_real_ur3_free_space_adapter.py
+          tests/test_m8_trial002.py
+          tests/test_runtime_provider_contract.py
+      - name: Run full software regression
+        env:
+          PYTHONPATH: src
+        run: python -m pytest -q
