@@ -1,21 +1,25 @@
 from .goal import Goal
 from .state import WorldState, UNKNOWN
 from .skill import SkillSpec
-from .experience import ExperienceRecord, ExperienceStore
+from .experience import ExperienceRecord, ExperienceStore, NOT_VERIFIED, UNRESOLVED
 from .outcome import OutcomeEstimate, EmpiricalOutcomeEstimator
-from .decision import Decision, DecisionEngine
-from .provenance import Provenance
+from .decision import Decision, CandidateDecision, DecisionEngine
+from .provenance import Provenance, SourceArtifact
 
 __all__ = [
     "Goal",
     "WorldState",
     "UNKNOWN",
+    "NOT_VERIFIED",
+    "UNRESOLVED",
     "SkillSpec",
     "ExperienceRecord",
     "ExperienceStore",
     "OutcomeEstimate",
     "EmpiricalOutcomeEstimator",
     "Decision",
+    "CandidateDecision",
     "DecisionEngine",
     "Provenance",
+    "SourceArtifact",
 ]
