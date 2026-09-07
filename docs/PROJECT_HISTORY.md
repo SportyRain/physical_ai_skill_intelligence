@@ -786,3 +786,98 @@ NEXT = `TRIAL002_PHYSICAL_SAFETY_CONFIRMATION`: confirm immediately before motio
 that the work area is clear, the +Z 5 mm path is clear, and the emergency stop is
 accessible. Until those three conditions are explicitly confirmed, the second
 real motion remains BLOCKED.
+
+## 2026-09-08 — M8 Trial002 real provider/robot execution verified
+
+DATE = 2026-09-08
+
+MILESTONE / DECISION = The narrow real Physical AI adapter → existing provider →
+UR3 execution boundary is VERIFIED by Trial002; M8 remains ACTIVE only for the
+separate timeout/cancel/wall-clock boundary.
+
+WHAT_CHANGED = The user explicitly reconfirmed the work area, +Z 5 mm path, and
+E-stop accessibility before the physical attempt. Two subsequent execution-shell
+attempts were blocked before robot motion: one by shell `nounset` while sourcing
+ROS setup, and one structured attempt
+`M8_REAL_Z5MM_TRIAL002_20260908_032603` by source attestation because the provider
+was imported from the canonical install path instead of the Git source-tree path
+required by the attestation contract. The latter failed closed with
+`RUNTIME_PROVIDER_IDENTITY_UNVERIFIED`, preserved JSON, and left FPC inactive.
+After restoring the already-verified source-tree import path, Trial002
+`M8_REAL_Z5MM_TRIAL002_20260908_032842` obtained runtime provider identity
+VERIFIED, called the existing provider, published one +Z command, completed,
+settled without timeout, observed real TCP motion, cleaned up FPC, paused Servo,
+and persisted structured JSON.
+
+WHY = M8 needed evidence for the missing Physical AI → existing provider → real
+robot → observed outcome boundary, not another proof that the UR3 can move in
+general. The pre-call failures also showed that the runtime attestation contract
+is path-sensitive even when installed bytes match; preserving this prevents future
+agents from repeating the same launch-environment mistake. A successful normal
+run does not prove timeout, cancel, completed stop after cancel, or full wall-clock
+bounding, so those claims are not inferred from success.
+
+EVIDENCE =
+- Physical AI execution commit: `c28bc3e5b9d832c46718cf70cc5aa3ffa2057dd6`.
+- Provider execution commit: `ce04cce26e486e5bd3c2dd77f85b91b4bf8d17f5`.
+- Pre-call blocked attempt: `M8_REAL_Z5MM_TRIAL002_20260908_032603`.
+- Pre-call blocked JSON SHA256:
+  `b6721febb0d00bced7056b69c2ed34a34fc099295f82079d8f04750687a3751c`.
+- Successful Trial002: `M8_REAL_Z5MM_TRIAL002_20260908_032842`.
+- Structured JSON path:
+  `/home/rosystem/ur_projects/physical_ai_evidence/M8_REAL_UR3_20260908/M8_REAL_Z5MM_TRIAL002_20260908_032842.json`.
+- Structured JSON SHA256:
+  `53f447e0c2d91409532a17e2dbb4c89fc9a6677cdfb445f942f5135cb1e28500`.
+- `action_success=true`, provider `status=PASS`, runtime provider identity
+  `VERIFIED`.
+- `command_published=true`, `provider_completed=true`, `settled=true`,
+  `timed_out=false`.
+- Initial TCP base m:
+  `[0.22595878378145123, -0.08115447707721629, 0.1453542557242874]`.
+- Final TCP base m:
+  `[0.2259875848028193, -0.08115966526156596, 0.14941279618600023]`.
+- Observed +Z translation: `0.004058540461712834` m.
+- Observed translation norm: `0.004058645968232375` m.
+- Final error: `0.9419142627227715` mm, within configured `1.0` mm settle
+  tolerance for the requested +5 mm target.
+- Motion elapsed: `4.559423718004837` s; wrapper elapsed:
+  `8.301585738998256` s.
+- Final FPC state: `inactive`; Servo paused: `true`.
+- Final post-run controller listing also showed
+  `forward_position_controller ... inactive`.
+- `command_acceptance=NOT_VERIFIED` is preserved exactly rather than inferred from
+  publication or motion.
+
+REVIEW_DECISION =
+`M8_TRIAL002_PHYSICAL_SAFETY_CONFIRMATION = VERIFIED`.
+`M8_TRIAL002_RUNTIME_PROVIDER_IDENTITY = VERIFIED`.
+`M8_TRIAL002_PROVIDER_CALL = VERIFIED`.
+`M8_TRIAL002_COMMAND_PUBLISHED = VERIFIED`.
+`M8_TRIAL002_PROVIDER_COMPLETED = VERIFIED`.
+`M8_TRIAL002_SETTLED = VERIFIED`.
+`M8_TRIAL002_FINAL_FPC_INACTIVE = VERIFIED`.
+`M8_TRIAL002_SERVO_PAUSED = VERIFIED`.
+`M8_TRIAL002_STRUCTURED_JSON = VERIFIED`.
+`REAL_UR3_+Z_5MM_SUCCESS = VERIFIED` within the configured 1 mm settle tolerance.
+`REAL_UR3_PROVIDER_ADAPTER = VERIFIED`.
+`REAL_ROBOT_EXECUTION = VERIFIED`.
+The narrow physical-link Gate is CLOSED. M8 as a whole is not closed.
+
+UNRESOLVED =
+`M8_TRIAL002_COMMAND_ACCEPTANCE = NOT_VERIFIED`.
+`PROVIDER_TIMEOUT = NOT_VERIFIED` because this run did not time out.
+`PROVIDER_CANCEL = NOT_VERIFIED` because the runtime contract exposes no verified
+cancel API/semantics.
+`PHYSICAL_STOP_AFTER_CANCEL = NOT_VERIFIED`.
+`WALL_CLOCK_BOUND = NOT_VERIFIED` because the 12 s timeout covers only the motion
+settle loop and excludes startup/cleanup; configured wall-clock limit is null.
+`BOUNDED_REAL_RUNTIME_TERMINATION = NOT_VERIFIED` for the same reason. The observed
+return in 8.301585738998256 s is evidence that this run returned, not a general
+end-to-end bound.
+
+NEXT = `M8_TIMEOUT_CANCEL_WALL_CLOCK_VALIDATION`: do not repeat normal +Z motion
+for provider/robot-link proof. Inspect and reuse existing provider/runtime
+capabilities first; establish operation-scoped timeout, cancellation acknowledgement
+plus completed physical stop, and end-to-end monotonic bounds including
+observation/cleanup. Preserve the no-new-framework boundary and do not promote any
+of these claims without direct evidence.
