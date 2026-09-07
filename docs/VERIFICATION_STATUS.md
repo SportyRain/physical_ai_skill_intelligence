@@ -14,9 +14,10 @@ M7.1 is CLOSED on authoritative `main`.
 Independent reviewer audit passed M7.1, including source commit
 `1a200c7df53d2d24c18eeb787a5336c80cec9c52`. This documentation-only follow-up
 finalized M7.1 after independent reviewer approval. M8 is now ACTIVE. Trial001 did
-not establish physical +Z success. Its runtime failure/recovery boundary and the
-structured evidence serializer software boundary are both now CLOSED. The current
-M8 boundary is Trial002 pre-motion source/machine/evidence-path validation.
+not establish physical +Z success. Its runtime failure/recovery boundary, the
+structured evidence serializer boundary, and the Trial002 evidence-path wiring
+boundary are now CLOSED. The current M8 boundary is the fresh Trial002 pre-motion
+machine/source gate.
 
 ```text
 AUTHORITATIVE_BRANCH = main
@@ -52,7 +53,7 @@ M7_1_FINALIZATION_STATUS = M7_1_FINALIZED_ON_MAIN
 ```text
 M8_STARTED = YES
 M8_STATUS = ACTIVE
-M8_GATE = TRIAL002_PRE_MOTION_MACHINE_SOURCE_AND_EVIDENCE_PATH_GATE
+M8_GATE = TRIAL002_PRE_MOTION_FRESH_MACHINE_AND_SOURCE_GATE
 
 PHYSICAL_AI_ADAPTER_MERGE = f9c111e84c83eeea3352767a958688c29d6eb58e
 PROVIDER_ACTION_MERGE = 8733c1f0a1172200d5a0b42a3fea4cd76bc4bcc2
@@ -85,7 +86,20 @@ STRUCTURED_EVIDENCE_SERIALIZER_FOCUSED_TEST = 10 passed
 STRUCTURED_EVIDENCE_SERIALIZER_DIRECT_REPRODUCTION = PASS
 STRUCTURED_EVIDENCE_SERIALIZER_DEFAULT_REGRESSION = PASS
 
-TRIAL002_EVIDENCE_PATH_WIRING = NOT_VERIFIED
+TRIAL002_RUNNER_PR = 6
+TRIAL002_RUNNER_TEST_HEAD = 6c773c8b8bffff5a4210a3e84a5a4b02113ace4b
+TRIAL002_RUNNER_MERGE = 3319720f709facbd9fcb7b7090087ae464b40c2e
+TRIAL002_PROVIDER_COMMIT = ce04cce26e486e5bd3c2dd77f85b91b4bf8d17f5
+TRIAL002_EVIDENCE_PATH_DRYRUN1_FAILURE = RUNTIME_PROVIDER_IDENTITY_UNVERIFIED
+TRIAL002_EVIDENCE_PATH_DRYRUN1_ROOT_CAUSE = INCOMPLETE_PROVIDER_RELATED_SOURCE_PROVENANCE
+TRIAL002_EVIDENCE_PATH_DRYRUN1_LOG_SHA256 = 9d6d662b6ca910deccb2aeb008836c59ccdd356e80f47185a1af7178b3a00b36
+TRIAL002_EVIDENCE_PATH_R2_LOG_SHA256 = 16646666e079dfee34e463c33fd5a5e01f38d0be9459d7579900620bfdc4a8d5
+TRIAL002_EVIDENCE_PATH_R2_JSON_SHA256 = b9fd7825352314fae46536b3c8c71658e593fa4e7e2660ef8169de06f21a00fd
+TRIAL002_COMPLETE_PROVIDER_SOURCE_IDENTITY = VERIFIED
+TRIAL002_RUNTIME_PROVIDER_IDENTITY = VERIFIED
+TRIAL002_EVIDENCE_PATH_WIRING = VERIFIED
+TRIAL002_EVIDENCE_PATH_WIRING_STATUS = CLOSED
+
 REAL_UR3_+Z_5MM_SUCCESS = NOT_VERIFIED
 REAL_UR3_PROVIDER_ADAPTER = NOT_VERIFIED
 REAL_ROBOT_EXECUTION = NOT_VERIFIED
@@ -96,8 +110,8 @@ WALL_CLOCK_BOUND = NOT_VERIFIED
 BOUNDED_REAL_RUNTIME_TERMINATION = NOT_VERIFIED
 
 SECOND_REAL_MOTION = BLOCKED
-NEXT_GATE = TRIAL002_PRE_MOTION_MACHINE_SOURCE_AND_EVIDENCE_PATH_GATE
-STATUS = M8_ACTIVE_TRIAL002_PRE_MOTION_GATE
+NEXT_GATE = TRIAL002_PRE_MOTION_FRESH_MACHINE_AND_SOURCE_GATE
+STATUS = M8_ACTIVE_TRIAL002_PRE_MOTION_FRESH_GATE
 ```
 
 The first physical call reached the provider and activated
@@ -122,15 +136,24 @@ old `TypeError: cannot pickle 'mappingproxy' object`, then serialized the same
 ProviderResult shape successfully, passed 10 focused serializer/adapter tests,
 compile, and the default regression suite. No ROS or physical action occurred.
 
-The serializer helper being VERIFIED does not by itself prove that a future
-Trial002 wrapper actually uses it. `TRIAL002_EVIDENCE_PATH_WIRING` therefore
-remains NOT_VERIFIED and is part of the current pre-motion gate together with
-caller-pinned source identity and a fresh machine readiness check. This does not
-reopen the already CLOSED headless runtime recovery capability.
+The Trial002 evidence path is now also verified. The first dry run failed closed
+before physical action with `RUNTIME_PROVIDER_IDENTITY_UNVERIFIED` because the
+runner provenance omitted provider-owned Python modules that were loaded as
+related sources. The runner was corrected to require the exact loaded source set:
+`real_free_space_translation.py`, package `__init__.py`, `se3.py`,
+`runtime/__init__.py`, and `robot_camera_collect.py`. The second dry run pinned
+provider main `ce04cce26e486e5bd3c2dd77f85b91b4bf8d17f5`, matched disk bytes to
+committed bytes for all five files, obtained runtime provider identity VERIFIED,
+returned `BLOCKED_EXECUTION_REQUIRED` with no command publication, and atomically
+wrote the structured JSON through `to_jsonable()`. No ROS mutation or physical
+motion occurred.
 
-This status does not promote real provider-adapter success, real robot execution,
-provider timeout/cancel, completed physical stop, or wall-clock bounds. Those
-claims remain NOT_VERIFIED until their own evidence gates are satisfied.
+This closes only the Trial002 evidence-path wiring/software provenance boundary.
+It does not establish real +Z success, real provider-adapter success, real robot
+execution, provider timeout/cancel, completed physical stop, or wall-clock bounds.
+Those claims remain NOT_VERIFIED. The next gate is a fresh source/machine readiness
+observation immediately before any physical authorization; it does not reopen any
+already CLOSED recovery or serializer capability.
 
 See [M7.1 verification](MILESTONE_7_1_VERIFICATION.md) for the implementation
 boundary, committed provider audit, adversarial coverage, and fresh rerun results:

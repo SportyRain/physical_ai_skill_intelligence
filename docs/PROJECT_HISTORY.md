@@ -636,3 +636,84 @@ readiness observation immediately before any motion authorization. This is not a
 reopening of the already CLOSED headless runtime recovery gate. A second +Z 5 mm
 physical action remains blocked until those gates and renewed physical safety
 confirmation pass.
+
+## 2026-09-08 — M8 Trial002 evidence path wiring gate closed
+
+DATE = 2026-09-08
+
+MILESTONE / DECISION = Trial002 structured evidence-path wiring and complete
+provider-source provenance boundary VERIFIED and CLOSED; M8 remains ACTIVE.
+
+WHAT_CHANGED = Physical AI PR #6 added one narrow repository-owned Trial002 runner
+that calls the existing +5 mm adapter exactly once, defaults to
+`execute_real=False`, refuses to overwrite an existing evidence path, records the
+caller-pinned Physical AI/provider identities, serializes the immutable
+`ProviderResult` through the already VERIFIED `to_jsonable()` helper, and writes
+JSON atomically. The first real-provider dry run failed closed with
+`RUNTIME_PROVIDER_IDENTITY_UNVERIFIED` because runner provenance contained only the
+main action file and omitted provider-owned Python modules loaded by the import
+path. No physical action occurred. The runner was corrected to require exactly the
+loaded related source set: `ur3_visual_servoing/__init__.py`, `se3.py`,
+`runtime/__init__.py`, and `robot_camera_collect.py`, in addition to
+`real_free_space_translation.py`.
+
+WHY = A verified serializer helper alone did not prove that Trial002 would invoke
+it, and caller-pinned source attestation must cover the complete loaded provider
+source set rather than only the entry-point file. Repeating a physical trial before
+closing both boundaries could either lose evidence or execute against incompletely
+attested source.
+
+EVIDENCE =
+- PR #6 tested head: `6c773c8b8bffff5a4210a3e84a5a4b02113ace4b`
+- PR #6 merged main: `3319720f709facbd9fcb7b7090087ae464b40c2e`
+- Provider main pinned for R2: `ce04cce26e486e5bd3c2dd77f85b91b4bf8d17f5`
+- Dry run #1 log SHA256:
+  `9d6d662b6ca910deccb2aeb008836c59ccdd356e80f47185a1af7178b3a00b36`
+- Dry run #1 JSON SHA256:
+  `0acd4502046e171069f4302d1f45ddd071a9e4c37f404d759c781839f316d06b`
+- Dry run #1 failure: `RUNTIME_PROVIDER_IDENTITY_UNVERIFIED`; exception type
+  `ValueError`; runtime identity remained `NOT_VERIFIED`; physical action NO.
+- Dry run #1 root cause: incomplete related-source provenance.
+- R2 gate log SHA256:
+  `16646666e079dfee34e463c33fd5a5e01f38d0be9459d7579900620bfdc4a8d5`
+- R2 structured JSON SHA256:
+  `b9fd7825352314fae46536b3c8c71658e593fa4e7e2660ef8169de06f21a00fd`
+- Exact provider disk/Git SHA match for five loaded files: PASS.
+- Compile: PASS; focused runner/serializer/adapter tests: PASS; default regression:
+  PASS.
+- `RUNTIME_PROVIDER_IDENTITY_STATUS=VERIFIED`.
+- `PROVIDER_RESULT_PRESENT=YES`.
+- `FAILURE_CODE=BLOCKED_EXECUTION_REQUIRED`.
+- `COMMAND_PUBLISHED=False`, `PROVIDER_COMPLETED=True`, `TIMED_OUT=False`.
+- `TRIAL002_COMPLETE_SOURCE_ATTESTATION=PASS`.
+- `TRIAL002_EVIDENCE_PATH_DRYRUN=PASS`.
+- `STRUCTURED_JSON_WRITTEN=YES`.
+- Physical action NO; ROS runtime mutation NO; Servo target NO; FPC activation NO.
+
+REVIEW_DECISION =
+`M8_TRIAL002_EVIDENCE_PATH_DRYRUN1_ROOT_CAUSE = VERIFIED`.
+`M8_TRIAL002_COMPLETE_PROVIDER_SOURCE_IDENTITY = VERIFIED`.
+`M8_TRIAL002_RUNTIME_PROVIDER_IDENTITY = VERIFIED`.
+`TRIAL002_EVIDENCE_PATH_WIRING = VERIFIED`.
+`TRIAL002_EVIDENCE_PATH_WIRING_STATUS = CLOSED`.
+The failed first dry run remains preserved evidence and is not erased by R2.
+
+UNRESOLVED =
+`REAL_UR3_+Z_5MM_SUCCESS = NOT_VERIFIED`.
+`REAL_UR3_PROVIDER_ADAPTER = NOT_VERIFIED`.
+`REAL_ROBOT_EXECUTION = NOT_VERIFIED`.
+`PROVIDER_TIMEOUT = NOT_VERIFIED`.
+`PROVIDER_CANCEL = NOT_VERIFIED`.
+`PHYSICAL_STOP_AFTER_CANCEL = NOT_VERIFIED`.
+`WALL_CLOCK_BOUND = NOT_VERIFIED`.
+`BOUNDED_REAL_RUNTIME_TERMINATION = NOT_VERIFIED`.
+M8 as a whole remains ACTIVE and is not closed.
+
+NEXT = `TRIAL002_PRE_MOTION_FRESH_MACHINE_AND_SOURCE_GATE`: immediately before any
+physical authorization, pin the merged Physical AI source and current approved
+provider source, perform a fresh canonical CHECK_ONLY machine readiness observation,
+and confirm that the source identity still matches the already-verified Trial002
+runner contract. Do not reopen or re-run the CLOSED runtime recovery, serializer,
+or evidence-path capability absent contradictory evidence. A single +Z 5 mm
+physical Trial002 remains blocked until this fresh gate and renewed physical safety
+confirmation pass.
