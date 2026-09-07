@@ -594,7 +594,7 @@ Trial002 must not repeat a physical experiment while its structured evidence can
 still be lost after the provider returns.
 
 EVIDENCE =
-- Serializer test head: `01e4d77fd095a9de11c1928f5949282a7f98c45c`
+- Serializer test head: `01e4d77fd095a9de11c2641a98e79b6556fcea33`
 - PR #4 merged main: `2e542100987ab7772f6e36c136aa99243ae5f7fa`
 - Software evidence log:
   `/home/rosystem/ur_projects/physical_ai_evidence/M8_REAL_UR3_20260908/M8_STRUCTURED_EVIDENCE_SERIALIZER_20260908_022328.log`
