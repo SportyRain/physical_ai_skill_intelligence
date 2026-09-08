@@ -155,9 +155,15 @@ def _normalize_runtime_result(
         cancel_requested=payload["cancel_requested"],
         cancel_acknowledged=cancel_acknowledged,
         cleanup_completed=payload["cleanup_completed"],
-        operation_elapsed_s=_nonnegative(payload["operation_elapsed_s"], "operation_elapsed_s"),
-        cleanup_elapsed_s=_nonnegative(payload["cleanup_elapsed_s"], "cleanup_elapsed_s"),
-        wall_clock_elapsed_s=_nonnegative(payload["wall_clock_elapsed_s"], "wall_clock_elapsed_s"),
+        operation_elapsed_s=_nonnegative(
+            payload["operation_elapsed_s"], "operation_elapsed_s"
+        ),
+        cleanup_elapsed_s=_nonnegative(
+            payload["cleanup_elapsed_s"], "cleanup_elapsed_s"
+        ),
+        wall_clock_elapsed_s=_nonnegative(
+            payload["wall_clock_elapsed_s"], "wall_clock_elapsed_s"
+        ),
     )
 
 
@@ -351,7 +357,10 @@ class RealUr3PositiveAxis5mmProvider:
                 raise ValueError("provider completion must be explicit")
             if type(payload["command_published"]) is not bool:
                 raise ValueError("command publication must be explicit")
-            if type(payload["settled"]) is not bool or type(payload["timed_out"]) is not bool:
+            if (
+                type(payload["settled"]) is not bool
+                or type(payload["timed_out"]) is not bool
+            ):
                 raise ValueError("provider termination flags must be explicit")
             if payload["status"] == "CANCELLED" and not extended_runtime:
                 raise ValueError("legacy runtime contract cannot report CANCELLED")
@@ -363,16 +372,25 @@ class RealUr3PositiveAxis5mmProvider:
 
             if extended_runtime:
                 for name, expected in (
-                    ("configured_operation_timeout_s", float(self.operation_timeout_s)),
-                    ("configured_cleanup_timeout_s", float(self.cleanup_timeout_s)),
+                    (
+                        "configured_operation_timeout_s",
+                        float(self.operation_timeout_s),
+                    ),
+                    (
+                        "configured_cleanup_timeout_s",
+                        float(self.cleanup_timeout_s),
+                    ),
                     (
                         "configured_wall_clock_limit_s",
-                        float(self.operation_timeout_s) + float(self.cleanup_timeout_s),
+                        float(self.operation_timeout_s)
+                        + float(self.cleanup_timeout_s),
                     ),
                 ):
                     actual = _positive(payload[name], name)
                     if not isclose(actual, expected, rel_tol=0.0, abs_tol=1e-9):
-                        raise ValueError(f"{name} contradicts requested runtime contract")
+                        raise ValueError(
+                            f"{name} contradicts requested runtime contract"
+                        )
 
             status = payload["status"]
             if not payload["provider_completed"]:
@@ -384,8 +402,6 @@ class RealUr3PositiveAxis5mmProvider:
                     or payload["timed_out"]
                 ):
                     raise ValueError("PASS contradicts provider termination flags")
-                if extended_runtime and runtime_result.cleanup_completed is not True:
-                    raise ValueError("PASS requires completed cleanup")
             elif status == "TIMEOUT":
                 if not payload["timed_out"] or payload["settled"]:
                     raise ValueError("TIMEOUT contradicts provider termination flags")
@@ -396,10 +412,27 @@ class RealUr3PositiveAxis5mmProvider:
                     runtime_result.cancel_requested is not True
                     or runtime_result.cancel_acknowledged is not True
                 ):
-                    raise ValueError("CANCELLED requires requested and acknowledged cancel")
+                    raise ValueError(
+                        "CANCELLED requires requested and acknowledged cancel"
+                    )
             elif status == "BLOCKED_EXECUTION_REQUIRED":
-                if payload["command_published"] or payload["timed_out"] or payload["settled"]:
+                if (
+                    payload["command_published"]
+                    or payload["timed_out"]
+                    or payload["settled"]
+                ):
                     raise ValueError("blocked result contradicts execution flags")
+
+            if extended_runtime and status in {"PASS", "TIMEOUT", "CANCELLED"}:
+                if runtime_result.cleanup_completed is not True:
+                    raise ValueError(f"{status} requires completed cleanup")
+                if payload["command_published"] and (
+                    payload["final_fpc_state"] != "inactive"
+                    or payload["servo_paused"] is not True
+                ):
+                    raise ValueError(
+                        "post-command terminal result requires completed safe cleanup"
+                    )
 
             if extended_runtime and status != "CANCELLED":
                 if runtime_result.cancel_requested or runtime_result.cancel_acknowledged:
@@ -428,8 +461,12 @@ class RealUr3PositiveAxis5mmProvider:
                 "initial_tcp_base_m": payload["initial_tcp_base_m"],
                 "target_tcp_base_m": payload["target_tcp_base_m"],
                 "final_tcp_base_m": payload["final_tcp_base_m"],
-                "observed_axis_translation_m": payload["observed_axis_translation_m"],
-                "observed_translation_norm_m": payload["observed_translation_norm_m"],
+                "observed_axis_translation_m": payload[
+                    "observed_axis_translation_m"
+                ],
+                "observed_translation_norm_m": payload[
+                    "observed_translation_norm_m"
+                ],
                 "settled": payload["settled"],
             },
             "final_runtime_state": {
