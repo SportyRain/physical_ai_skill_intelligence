@@ -208,6 +208,21 @@ def test_timeout_is_preserved_without_promoting_timeout_verification(monkeypatch
     assert result.runtime_contract.wall_clock_bound == "NOT_VERIFIED"
 
 
+def test_timeout_with_incomplete_cleanup_fails_closed(monkeypatch):
+    provider_result = replace(
+        extended_result("TIMEOUT"),
+        cleanup_completed=False,
+        final_fpc_state="active",
+        servo_paused=False,
+    )
+    result = execute(monkeypatch, provider_result)
+    assert result.action_success is False
+    assert result.failure_code == "INVALID_PROVIDER_RESULT"
+    assert result.observations["provider_result"]["cleanup_completed"] is False
+    assert result.runtime_result.cleanup_completed is False
+    assert result.runtime_result.physical_stop_verified == "NOT_VERIFIED"
+
+
 def test_cancel_completed_normalizes_only_to_software_acknowledgement(monkeypatch):
     result = execute(monkeypatch, extended_result("CANCELLED"))
     assert result.action_success is False
@@ -222,11 +237,13 @@ def test_cancel_completed_normalizes_only_to_software_acknowledgement(monkeypatc
 def test_cancel_acknowledgement_and_cleanup_completion_remain_distinct(monkeypatch):
     provider_result = replace(extended_result("CANCELLED"), cleanup_completed=False)
     result = execute(monkeypatch, provider_result)
-    assert result.failure_code == "CANCELLED"
+    assert result.action_success is False
+    assert result.failure_code == "INVALID_PROVIDER_RESULT"
     assert result.runtime_result.cancel_requested is True
     assert result.runtime_result.cancel_acknowledged is True
     assert result.runtime_result.cleanup_completed is False
     assert result.runtime_result.physical_stop_verified == "NOT_VERIFIED"
+    assert result.observations["provider_result"]["cleanup_completed"] is False
 
 
 def test_contradictory_cancel_result_fails_closed_and_preserves_raw_evidence(monkeypatch):
