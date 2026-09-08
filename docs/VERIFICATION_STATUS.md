@@ -263,3 +263,30 @@ additional normal-motion proof is required.
 
 Historical milestone reports describe their own source snapshots, test counts,
 and review states; they do not override this current ledger/status.
+
+## M8 timeout/cancel/wall-clock software integration — VERIFIED / CLOSED
+
+The reviewed software contract is now on both authoritative `main` branches. The
+provider implementation was merged by `ur3_visual_servoing` PR #219 at
+`f3f692b70c7194e6f6007d3539cd5ad340515492`; Physical AI consumer propagation was
+merged by PR #9 at `3a9dbeceb4c077157f265edb01d3e40b0006e43c`.
+
+Post-merge workflow run `34177727857` checked those exact merged main heads. Python
+compile passed; provider focused/adversarial coverage passed `28` tests; Physical
+AI focused/adversarial tests passed; the actual provider-to-consumer software
+contract passed for `PASS`, `TIMEOUT`, and `CANCELLED`; and the full Physical AI
+software regression passed. No physical action occurred in this validation.
+
+The provider repository subsequently advanced to
+`4e1351467536cd1bc323851e345c370088265d22` while closing its separate
+`REAL_MULTI_EXPERIENCE_DECISION_VALIDATION` physical milestone. The M8
+`real_free_space_translation.py` blob remains unchanged from PR #219 at
+`8612a25b172618b00bf5176e1dc9b5546a7b21ee`. That separate Continuous Push /
+multi-experience physical evidence is not evidence for the M8 termination claims.
+
+Therefore the software integration sub-boundary is VERIFIED and CLOSED, while
+`PROVIDER_TIMEOUT`, `PROVIDER_CANCEL`, `PHYSICAL_STOP_AFTER_CANCEL`,
+`WALL_CLOCK_BOUND`, and `BOUNDED_REAL_RUNTIME_TERMINATION` remain `NOT_VERIFIED`.
+M8 remains ACTIVE at the same timeout/cancel/wall-clock validation Gate. Any real
+UR3 termination validation requires a separate fresh machine/source gate and
+explicit physical approval.

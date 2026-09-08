@@ -881,3 +881,70 @@ capabilities first; establish operation-scoped timeout, cancellation acknowledge
 plus completed physical stop, and end-to-end monotonic bounds including
 observation/cleanup. Preserve the no-new-framework boundary and do not promote any
 of these claims without direct evidence.
+
+## 2026-09-08 — M8 timeout/cancel/wall-clock software integration closed on main
+
+DATE = 2026-09-08
+
+MILESTONE / DECISION = The M8 timeout/cancel/wall-clock software integration
+sub-boundary is VERIFIED and CLOSED on authoritative main; M8 remains ACTIVE for
+separate physical termination evidence.
+
+WHAT_CHANGED = The reviewed provider termination contract was merged through
+`SportyRain/ur3_visual_servoing` PR #219 at
+`f3f692b70c7194e6f6007d3539cd5ad340515492`. The matching Physical AI consumer
+contract/result propagation was merged through PR #9 at
+`3a9dbeceb4c077157f265edb01d3e40b0006e43c`. The provider keeps the existing
+`start -> move -> finally cleanup` execution path while adding cooperative
+operation deadline/cancellation evidence and a separate cleanup budget. Physical
+AI preserves `cancel_requested`, `cancel_acknowledged`, `cleanup_completed`, and
+`physical_stop_verified` as distinct semantics and fails closed on contradictory
+termination/elapsed evidence.
+
+WHY = Trial002 proved the normal Physical AI -> provider -> real UR3 execution
+boundary but did not exercise timeout, cancellation, completed physical stop after
+cancel, or an end-to-end wall-clock bound. The smallest in-place software contract
+had to be integrated before any bounded real termination experiment, without a new
+manager, controller, runtime framework, recovery framework, or robot path.
+
+EVIDENCE =
+- Provider PR #219 merge: `f3f692b70c7194e6f6007d3539cd5ad340515492`.
+- Physical AI PR #9 merge: `3a9dbeceb4c077157f265edb01d3e40b0006e43c`.
+- Post-merge validation workflow: `34177727857`.
+- Workflow checked the exact merged main heads above.
+- Python compile: PASS.
+- Provider focused + adversarial tests: `28 passed`.
+- Physical AI focused + adversarial tests: PASS.
+- Actual provider-to-consumer software contract: PASS for `PASS`, `TIMEOUT`, and
+  `CANCELLED`.
+- Full Physical AI software regression: PASS.
+- Physical action during the post-merge validation: NO.
+- Provider current main at record sync:
+  `4e1351467536cd1bc323851e345c370088265d22`.
+- `src/ur3_visual_servoing/runtime/real_free_space_translation.py` blob SHA at
+  PR #219 and current provider main: `8612a25b172618b00bf5176e1dc9b5546a7b21ee`.
+- Provider's separate `REAL_MULTI_EXPERIENCE_DECISION_VALIDATION` is PHYSICAL
+  VERIFIED / CLOSED, but it exercised the Continuous Push/multi-experience path and
+  does not transfer verification to the M8 termination claims.
+
+REVIEW_DECISION =
+`M8_TIMEOUT_CANCEL_WALL_CLOCK_SOFTWARE_INTEGRATION = VERIFIED`.
+`M8_TIMEOUT_CANCEL_WALL_CLOCK_SOFTWARE_INTEGRATION_STATUS = CLOSED`.
+The software-only integration is accepted on main. It does not establish real
+provider timeout, real cancellation, completed physical stop after cancellation,
+a real wall-clock bound, or bounded real runtime termination.
+
+UNRESOLVED =
+`PROVIDER_TIMEOUT = NOT_VERIFIED`.
+`PROVIDER_CANCEL = NOT_VERIFIED`.
+`PHYSICAL_STOP_AFTER_CANCEL = NOT_VERIFIED`.
+`WALL_CLOCK_BOUND = NOT_VERIFIED`.
+`BOUNDED_REAL_RUNTIME_TERMINATION = NOT_VERIFIED`.
+M8 remains ACTIVE at `TIMEOUT_CANCEL_WALL_CLOCK_VALIDATION_GATE`.
+
+NEXT = Prepare a fresh source/machine/safety gate for a separately authorized real
+termination experiment. Preserve the existing provider/runtime path and the
+semantic separation `cancel_requested != cancel_acknowledged != cleanup_completed
+!= physical_stop_verified`. Do not promote any physical claim from software-only
+evidence, and require explicit user approval immediately before any future real UR3
+motion.
