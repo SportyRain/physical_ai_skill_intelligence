@@ -56,6 +56,15 @@ _EXTENDED_RUNTIME_RESULT_FIELDS = frozenset(
         "cleanup_completed",
     }
 )
+_TERMINATION_REASONS_BY_STATUS = {
+    "PASS": frozenset({"SETTLED"}),
+    "TIMEOUT": frozenset({"MOTION_SETTLE_TIMEOUT", "OPERATION_TIMEOUT"}),
+    "CANCELLED": frozenset({"CANCEL_REQUESTED", "CANCELLED_BEFORE_RUNTIME"}),
+    "BLOCKED_EXECUTION_REQUIRED": frozenset(
+        {"EXECUTION_BLOCKED", "BLOCKED_EXECUTION_REQUIRED"}
+    ),
+}
+_ELAPSED_TOLERANCE_S = 1e-6
 
 
 def _positive(value: Any, name: str) -> float:
@@ -165,6 +174,34 @@ def _normalize_runtime_result(
             payload["wall_clock_elapsed_s"], "wall_clock_elapsed_s"
         ),
     )
+
+
+def _validate_extended_runtime_semantics(
+    payload: Mapping[str, Any],
+    runtime_result: ProviderRuntimeResult,
+) -> None:
+    status = str(payload["status"])
+    allowed_reasons = _TERMINATION_REASONS_BY_STATUS[status]
+    if runtime_result.termination_reason not in allowed_reasons:
+        raise ValueError(
+            f"{status} contradicts termination_reason={runtime_result.termination_reason}"
+        )
+
+    operation_elapsed = runtime_result.operation_elapsed_s
+    cleanup_elapsed = runtime_result.cleanup_elapsed_s
+    wall_clock_elapsed = runtime_result.wall_clock_elapsed_s
+    if operation_elapsed is None or cleanup_elapsed is None or wall_clock_elapsed is None:
+        raise ValueError("extended runtime elapsed evidence is incomplete")
+    if wall_clock_elapsed + _ELAPSED_TOLERANCE_S < operation_elapsed + cleanup_elapsed:
+        raise ValueError(
+            "wall_clock_elapsed_s is smaller than operation+cleanup elapsed evidence"
+        )
+
+    cleanup_limit = _positive(
+        payload["configured_cleanup_timeout_s"], "configured_cleanup_timeout_s"
+    )
+    if cleanup_elapsed > cleanup_limit + _ELAPSED_TOLERANCE_S:
+        raise ValueError("cleanup_elapsed_s exceeds configured cleanup timeout")
 
 
 @dataclass(frozen=True)
@@ -391,6 +428,7 @@ class RealUr3PositiveAxis5mmProvider:
                         raise ValueError(
                             f"{name} contradicts requested runtime contract"
                         )
+                _validate_extended_runtime_semantics(payload, runtime_result)
 
             status = payload["status"]
             if not payload["provider_completed"]:
