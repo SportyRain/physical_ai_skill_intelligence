@@ -1,0 +1,193 @@
+name: m8-timeout-cancel-integration-temp
+
+on:
+  push:
+    branches:
+      - m8/timeout-cancel-wall-clock-integration-20260908
+
+jobs:
+  software-only-integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install software-only test dependencies
+        run: python -m pip install --disable-pip-version-check pytest numpy scipy
+      - name: Checkout provider integration branch
+        uses: actions/checkout@v4
+        with:
+          repository: SportyRain/ur3_visual_servoing
+          ref: m8/timeout-cancel-wall-clock-integration-20260908
+          path: _provider
+      - name: Compile changed integration sources
+        env:
+          PYTHONPATH: src:_provider/src
+        run: |
+          python -m py_compile src/physical_ai_skill_intelligence/provider_contract.py
+          python -m py_compile src/physical_ai_skill_intelligence/provider_observation.py
+          python -m py_compile src/physical_ai_skill_intelligence/adapters/real_ur3_free_space.py
+          python -m py_compile src/physical_ai_skill_intelligence/m8_trial002.py
+          python -m py_compile _provider/src/ur3_visual_servoing/runtime/real_free_space_translation.py
+      - name: Run provider focused termination tests
+        env:
+          PYTHONPATH: _provider/src
+        run: python -m pytest -q _provider/tests/test_real_free_space_translation.py
+      - name: Run Physical AI focused consumer tests
+        env:
+          PYTHONPATH: src
+        run: >-
+          python -m pytest -q
+          tests/test_m8_consumer_runtime_contract.py
+          tests/test_m8_consumer_trial002_forwarding.py
+          tests/test_real_ur3_free_space_adapter.py
+          tests/test_m8_trial002.py
+          tests/test_runtime_provider_contract.py
+      - name: Run actual provider-to-consumer integration contract
+        env:
+          PYTHONPATH: src:_provider/src
+        run: |
+          python - <<'PY'
+          import numpy as np
+          from ur3_visual_servoing.runtime import real_free_space_translation as provider
+          from physical_ai_skill_intelligence.adapters import real_ur3_free_space as adapter
+          from physical_ai_skill_intelligence.goal import Goal
+          from physical_ai_skill_intelligence.provenance import Provenance
+          from physical_ai_skill_intelligence.state import WorldState
+
+          class FakeRuntime:
+              def __init__(self, *, motion_timeout_sec, settle_error_mm, terminal="PASS"):
+                  self.terminal = terminal
+                  self.initial_tcp = None
+                  self.target_tcp = None
+                  self.final_tcp = None
+                  self.final_error_mm = None
+                  self.motion_started_at = None
+                  self.move_command_published = False
+
+              def start(self, *, deadline, cancel_requested):
+                  self.initial_tcp = np.array([0.20, -0.08, 0.14])
+                  self.final_tcp = self.initial_tcp.copy()
+
+              def move(self, axis, *, deadline, cancel_requested):
+                  self.motion_started_at = provider.time.monotonic()
+                  self.target_tcp = self.initial_tcp + provider.positive_axis_delta_base(axis)
+                  self.final_tcp = self.target_tcp.copy()
+                  self.move_command_published = True
+                  if self.terminal == "CANCELLED":
+                      raise provider._OperationCancelled("test cancel")
+                  if self.terminal == "TIMEOUT":
+                      self.final_tcp[2] -= 0.002
+                      self.final_error_mm = 2.0
+                      return {
+                          "status": "TIMEOUT",
+                          "termination_reason": "MOTION_SETTLE_TIMEOUT",
+                          "command_published": True,
+                          "settled": False,
+                          "timed_out": True,
+                          "initial_tcp": self.initial_tcp,
+                          "target_tcp": self.target_tcp,
+                          "final_tcp": self.final_tcp,
+                          "final_error_mm": self.final_error_mm,
+                          "motion_elapsed_s": 0.1,
+                      }
+                  self.final_error_mm = 0.0
+                  return {
+                      "status": "PASS",
+                      "termination_reason": "SETTLED",
+                      "command_published": True,
+                      "settled": True,
+                      "timed_out": False,
+                      "initial_tcp": self.initial_tcp,
+                      "target_tcp": self.target_tcp,
+                      "final_tcp": self.final_tcp,
+                      "final_error_mm": self.final_error_mm,
+                      "motion_elapsed_s": 0.1,
+                  }
+
+              def cleanup(self, *, deadline):
+                  return "inactive", True
+
+          def make_result(terminal):
+              return provider.execute_positive_axis_5mm(
+                  "Z",
+                  execute=True,
+                  _runtime_factory=lambda **kwargs: FakeRuntime(
+                      **kwargs, terminal=terminal
+                  ),
+              )
+
+          generated = {
+              terminal: make_result(terminal)
+              for terminal in ("PASS", "TIMEOUT", "CANCELLED")
+          }
+          assert generated["PASS"].status == "PASS"
+          assert generated["TIMEOUT"].status == "TIMEOUT"
+          assert generated["CANCELLED"].status == "CANCELLED"
+          assert generated["CANCELLED"].cancel_completed is True
+          assert generated["CANCELLED"].cleanup_completed is True
+
+          provenance = Provenance(
+              source_repository=adapter.PROVIDER_REPOSITORY,
+              source_commit="a" * 40,
+              source_path=adapter.SOURCE_PATH,
+              source_record_id=adapter.PROVIDER_CALLABLE,
+              raw_sha256="b" * 64,
+              schema_version="M8_INTEGRATION_V1",
+              importer_version="TEST",
+              artifact_snapshot_commit="a" * 40,
+              experiment_runtime_commit="a" * 40,
+          )
+          goal = Goal(
+              predicate=adapter.GOAL_PREDICATE,
+              subject=adapter.GOAL_SUBJECT,
+              reference=None,
+              parameters={"axis": "Z"},
+          )
+          adapter.attest_provider_source = lambda *args, **kwargs: {
+              "status": "VERIFIED",
+              "source_repository": adapter.PROVIDER_REPOSITORY,
+              "source_commit": "a" * 40,
+              "module": adapter.PROVIDER_MODULE,
+              "callable": adapter.PROVIDER_CALLABLE,
+              "sources": {adapter.SOURCE_PATH: "b" * 64},
+          }
+          adapter.import_module = lambda _: provider
+
+          original_execute = provider.execute_positive_axis_5mm
+          try:
+              for terminal in ("PASS", "TIMEOUT", "CANCELLED"):
+                  provider.execute_positive_axis_5mm = (
+                      lambda *args, _result=generated[terminal], **kwargs: _result
+                  )
+                  consumer = adapter.RealUr3PositiveAxis5mmProvider(
+                      provenance,
+                      provider_repository="/tmp/provider",
+                      execute_real=True,
+                  )
+                  result = consumer.execute(adapter.SKILL_NAME, goal, WorldState())
+                  assert result.runtime_contract.provider_timeout == "NOT_VERIFIED"
+                  assert result.runtime_contract.provider_cancel == "NOT_VERIFIED"
+                  assert result.runtime_contract.wall_clock_bound == "NOT_VERIFIED"
+                  assert result.runtime_result.cleanup_completed is True
+                  assert result.runtime_result.physical_stop_verified == "NOT_VERIFIED"
+                  if terminal == "PASS":
+                      assert result.action_success is True
+                  elif terminal == "TIMEOUT":
+                      assert result.action_success is False
+                      assert result.failure_code == "TIMEOUT"
+                      assert result.runtime_result.timed_out is True
+                  else:
+                      assert result.action_success is False
+                      assert result.failure_code == "CANCELLED"
+                      assert result.runtime_result.cancel_requested is True
+                      assert result.runtime_result.cancel_acknowledged is True
+          finally:
+              provider.execute_positive_axis_5mm = original_execute
+          PY
+      - name: Run full Physical AI software regression
+        env:
+          PYTHONPATH: src
+        run: python -m pytest -q
