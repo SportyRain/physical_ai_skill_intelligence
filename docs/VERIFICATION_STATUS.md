@@ -258,35 +258,98 @@ remains an offline evaluation harness.
 The existing M5 runtime recovery evidence remains historical preserved evidence.
 Real recovery adapter/execution, decision superiority, repeatable performance
 improvement, self-learning, and novel algorithm claims remain NOT_VERIFIED.
-M8 remains ACTIVE only for the controlled timeout/cancel/wall-clock boundary; no
-additional normal-motion proof is required.
 
-Historical milestone reports describe their own source snapshots, test counts,
-and review states; they do not override this current ledger/status.
+## M8 controlled real runtime validation — VERIFIED / CLOSED / 2026-09-09
 
-## M8 timeout/cancel/wall-clock software integration — VERIFIED / CLOSED
+This section supersedes the earlier `M8_STATUS = ACTIVE` and five physical
+termination `NOT_VERIFIED` values above. Historical statements are preserved to
+show the sequence of evidence rather than rewritten.
 
-The reviewed software contract is now on both authoritative `main` branches. The
-provider implementation was merged by `ur3_visual_servoing` PR #219 at
-`f3f692b70c7194e6f6007d3539cd5ad340515492`; Physical AI consumer propagation was
-merged by PR #9 at `3a9dbeceb4c077157f265edb01d3e40b0006e43c`.
+The exact existing M8 provider was exercised in real UR3 timeout and cancellation
+termination paths after fresh source/machine/safety gates. No new robot framework,
+manager, controller, planner, or recovery framework was introduced. The timeout
+path returned `TIMEOUT / MOTION_SETTLE_TIMEOUT` after a published command and
+completed cleanup. The cancellation path was triggered only after an independent
+TCP observer measured at least 0.5 mm of real +Z motion; the provider returned
+`CANCELLED / CANCEL_REQUESTED`, acknowledged cancellation, completed cleanup, left
+FPC inactive and Servo paused, and an independent continuous TCP trace established
+a stable post-return physical stop.
 
-Post-merge workflow run `34177727857` checked those exact merged main heads. Python
-compile passed; provider focused/adversarial coverage passed `28` tests; Physical
-AI focused/adversarial tests passed; the actual provider-to-consumer software
-contract passed for `PASS`, `TIMEOUT`, and `CANCELLED`; and the full Physical AI
-software regression passed. No physical action occurred in this validation.
+```text
+M8_STATUS = CLOSED
+M8_GATE = CLOSED
+M8_CLOSURE_DATE = 2026-09-09
 
-The provider repository subsequently advanced to
-`4e1351467536cd1bc323851e345c370088265d22` while closing its separate
-`REAL_MULTI_EXPERIENCE_DECISION_VALIDATION` physical milestone. The M8
-`real_free_space_translation.py` blob remains unchanged from PR #219 at
-`8612a25b172618b00bf5176e1dc9b5546a7b21ee`. That separate Continuous Push /
-multi-experience physical evidence is not evidence for the M8 termination claims.
+M8_CLOSURE_PHYSICAL_AI_SOURCE = 74c7c9ec483d8d852052b850516fa89f08d7b897
+M8_TIMEOUT_PROVIDER_SOURCE = 8d711a3d5ce874b7bf09555f2952252d8ddeed13
+M8_CANCEL_PROVIDER_SOURCE = 89a2eda0dcce1fc5e492cd2f64dec5faca68c788
+M8_PROVIDER_RUNTIME_BLOB = 8612a25b172618b00bf5176e1dc9b5546a7b21ee
+M8_PROVIDER_RUNTIME_SHA256 = 329f700dd25a25584f9e460caa364b5de58849138596b3907abf6435ba92181c
+M8_CANCEL_PROVIDER_EXECUTION_SOURCE_UNCHANGED = VERIFIED
 
-Therefore the software integration sub-boundary is VERIFIED and CLOSED, while
-`PROVIDER_TIMEOUT`, `PROVIDER_CANCEL`, `PHYSICAL_STOP_AFTER_CANCEL`,
-`WALL_CLOCK_BOUND`, and `BOUNDED_REAL_RUNTIME_TERMINATION` remain `NOT_VERIFIED`.
-M8 remains ACTIVE at the same timeout/cancel/wall-clock validation Gate. Any real
-UR3 termination validation requires a separate fresh machine/source gate and
-explicit physical approval.
+M8_TRIAL_PRE_MOTION_ISOLATION_GATE = VERIFIED
+M8_TERMINATION_SOURCE_ATTESTED_DRYRUN = VERIFIED
+
+PROVIDER_TIMEOUT = VERIFIED
+PROVIDER_CANCEL = VERIFIED
+PHYSICAL_STOP_AFTER_CANCEL = VERIFIED
+WALL_CLOCK_BOUND = VERIFIED
+BOUNDED_REAL_RUNTIME_TERMINATION = VERIFIED
+
+TIMEOUT_TRIAL_ID = M8_TERMINATION_TIMEOUT_R2_20260909_001056
+TIMEOUT_MOTION_TIMEOUT_S = 0.05
+TIMEOUT_MOTION_ELAPSED_S = 0.05008394699689234
+TIMEOUT_PROVIDER_WALL_CLOCK_ELAPSED_S = 3.298580510003376
+TIMEOUT_WRAPPER_ELAPSED_S = 3.3476631119992817
+TIMEOUT_CONFIGURED_WALL_CLOCK_LIMIT_S = 20.0
+TIMEOUT_JSON_SHA256 = 7f29aaad4974fbdc3fa786991b827f96e36bf0efe397c1874af7bf600a0b29b1
+TIMEOUT_LOG_SHA256 = e6dd69255479b3e9789911aa614b42b361c5f973f8172d32d30c580cae52200c
+
+CANCEL_TRIAL_ID = M8_TERMINATION_CANCEL_20260909_001826
+CANCEL_MOTION_TRIGGER_Z_M = 0.000558267621881936
+CANCEL_SAMPLE_Z_M = 0.0012466677137311089
+CANCEL_MAX_ADDITIONAL_DISPLACEMENT_FROM_CANCEL_SAMPLE_M = 0.0018598379582002113
+CANCEL_TO_PROVIDER_RETURN_S = 0.3867265429944382
+CANCEL_POST_RETURN_TAIL_MAX_DISPLACEMENT_M = 0.000058838893773006324
+CANCEL_PROVIDER_WALL_CLOCK_ELAPSED_S = 4.575946910998027
+CANCEL_WRAPPER_ELAPSED_S = 4.621870205999585
+CANCEL_CONFIGURED_WALL_CLOCK_LIMIT_S = 20.0
+CANCEL_JSON_SHA256 = 4f3682d4c621546ad27a25f7a59c503a3ab314277a55ade847eea74171d0c69f
+CANCEL_TCP_TRACE_SHA256 = 058fb7b97c43a672b39b333b0d23139c5222d9608de48785b04302962c9a0c30
+CANCEL_LOG_SHA256 = 5dc93f7950952bb0de21d652691535bb20adc99e7b9251283ac84986829c8c97
+
+PHYSICAL_STOP_AFTER_CANCEL_SCOPE = COMPLETED STOP AFTER CANCEL AND CLEANUP; NOT IMMEDIATE STOP. CANCEL WAS FOLLOWED BY UP TO 1.859838 MM ADDITIONAL OBSERVED DISPLACEMENT BEFORE THE POST-RETURN STABLE TAIL.
+WALL_CLOCK_BOUND_SCOPE = EXACT M8 PROVIDER OPERATION+SAFETY-CLEANUP CONTRACT. BOTH REAL TIMEOUT AND CANCEL PATHS RETURNED WITHIN THE CONFIGURED 20 S LIMIT. THIS DOES NOT CLAIM A GENERAL OS HARD-KILL OR UNBOUNDED EXTERNAL SERIALIZATION GUARANTEE.
+BOUNDED_REAL_RUNTIME_TERMINATION_SCOPE = EXACT M8 TIMEOUT AND CANCEL PATHS; PROVIDER RETURN + COMPLETED SAFE CLEANUP + FINAL FPC INACTIVE + SERVO PAUSED.
+
+CONCURRENT_RUNTIME_MUTATION_GUARD = NOT_VERIFIED
+CONCURRENT_RUNTIME_MUTATION_GUARD_SCOPE = TRIAL-SPECIFIC PRE-MOTION ISOLATION VERIFIED ONLY; NO GLOBAL CONTINUOUS GUARD CLAIM
+M8_TRIAL002_COMMAND_ACCEPTANCE = NOT_VERIFIED
+
+NEXT_GATE = NONE_M8_CLOSED
+STATUS = M8_CLOSED_CONTROLLED_REAL_RUNTIME_VALIDATION
+```
+
+The first timeout attempt used `motion_timeout_s=0.25` but the robot settled in
+`0.19381318900559563` s, so it was preserved as an unexpected normal PASS rather
+than mislabeled as timeout evidence. The retry at `0.05` s exercised the actual
+real timeout path. At the provider timeout snapshot little TCP translation had yet
+been observed, while the later post-return observation showed that physical motion
+continued during termination/cleanup before becoming stable. Therefore timeout or
+cancel acknowledgement is not interpreted as an instantaneous physical stop.
+
+For cancellation, the external TCP observer triggered at +Z
+`0.000558267621881936` m. The nearest cancel sample was already +Z
+`0.0012466677137311089` m, and up to `0.0018598379582002113` m additional physical
+displacement from that cancel sample was observed before completion. The provider
+returned 0.3867265429944382 s after the cancel request; the post-return tail had
+220 samples with maximum displacement `0.000058838893773006324` m. This supports
+completed physical stop after cancellation and cleanup, but explicitly does not
+support an immediate-stop claim.
+
+M8 is CLOSED within this controlled provider/runtime scope. Remaining separate
+NOT_VERIFIED claims, including the global concurrent-runtime-mutation guard,
+command acceptance, approved provider version policy, third-party/native-library
+attestation, physical cost, retryability, decision superiority, performance
+improvement, self-learning, and novel algorithm claims are not promoted by this
+closure.
